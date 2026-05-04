@@ -1,20 +1,51 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello UserController!{% endblock %}
+{% block title %}Login{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+    <header class="bg-blue-950">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 4V44L12 42L16 44L20 42L24 44L28 42L32 44L36 42L40 44V4L36 6L32 4L28 6L24 4L20 6L16 4L12 6L8 4Z"
+                stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path
+                d="M32 16H20C18.9391 16 17.9217 16.4214 17.1716 17.1716C16.4214 17.9217 16 18.9391 16 20C16 21.0609 16.4214 22.0783 17.1716 22.8284C17.9217 23.5786 18.9391 24 20 24H28C29.0609 24 30.0783 24.4214 30.8284 25.1716C31.5786 25.9217 32 26.9391 32 28C32 29.0609 31.5786 30.0783 30.8284 30.8284C30.0783 31.5786 29.0609 32 28 32H16"
+                stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M24 35V13" stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <h1>Connectez-vous</h1>
+        <p> Ou Créez un compte gratuitement</p>
+    </header>
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/user/Bureau/phase3-symfony-facturation/src/Controller/UserController.php</code></li>
-        <li>Your template at <code>/home/user/Bureau/phase3-symfony-facturation/templates/user/index.html.twig</code></li>
-    </ul>
-</div>
+
+   <main>
+  
+    <form class="max-w-sm mx-auto">
+        <div class="mb-5">
+            <label for="email-alternative" class="block mb-2.5 text-sm font-medium text-heading">Adresse Email</label>
+            <input type="email" id="email-alternative"
+                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow placeholder:text-body"
+                placeholder="name@flowbite.com" required />
+        </div>
+        <div class="mb-5">
+            <label for="password-alternative" class="block mb-2.5 text-sm font-medium text-heading">Mot de passe</label>
+            <input type="password" id="password-alternative"
+                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow placeholder:text-body"
+                placeholder="••••••••" required />
+        </div>
+        <div class="flex items-start mb-5">
+            <label for="remember-alternative" class="flex items-center h-5">
+                <input id="remember-alternative" type="checkbox" value=""
+                    class="w-4 h-4 border border-default-medium rounded-xs bg-neutral-secondary-medium focus:ring-2 focus:ring-brand-soft"
+                    required />
+                <p class="ms-2 text-sm font-medium text-heading select-none">Je suis d'accord avec les <a href="#"
+                        class="text-fg-brand hover:underline">conditions d'utilisation</a>.</p>
+            </label>
+        </div>
+        <button type="submit"
+            class="text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">Se
+            connecter</button>
+    </form>
+ </main>
+
 {% endblock %}
