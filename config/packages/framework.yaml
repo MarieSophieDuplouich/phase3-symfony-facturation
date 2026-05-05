@@ -1,8 +1,8 @@
 framework:
     secret: '%env(APP_SECRET)%'
     session:
-        cookie_lifetime: 15
-        gc_maxlifetime: 15
+        cookie_lifetime: 3600
+        gc_maxlifetime: 3600
 
 
 when@test:
