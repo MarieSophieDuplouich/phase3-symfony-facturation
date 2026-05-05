@@ -20,30 +20,22 @@
     </header>
 
 
-   <main class=" rounded-lg shadow-md">
+   <main class="  shadow-md  bg-white w-96 h-96 rounded-lg">
   
-    <form class="  flex flex-col gap-2 mb-5 ">
-        <div class="mb-5">
-            <label for="email-alternative" class="block mb-2.5 text-sm font-medium text-heading">Adresse Email</label>
-            <input type="email" id="email-alternative"
-                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow placeholder:text-body"
-                placeholder="name@flowbite.com" required />
+    <form class="flex flex-col justify-center items-center p-6 gap-2 mb-5">
+        <div class="mb-5 w-full">
+            <label for="email-alternative" class="mb-2.5 text-sm font-medium text-heading">Adresse Email</label>
+            <input name="email" type="email" id="email-alternative"
+                class="border border-gray-300 rounded-sm  w-full px-6 py-4 text-sm"
+               placeholder="contact@entreprise.fr" required />
         </div>
-        <div class="mb-5">
-            <label for="password-alternative" class="block mb-2.5 text-sm font-medium text-heading">Mot de passe</label>
-            <input type="password" id="password-alternative"
-                class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand block w-full px-3 py-2.5 shadow placeholder:text-body"
+        <div class="mb-5 w-full">
+            <label for="password-alternative" class=" mb-2.5 text-sm font-medium text-heading">Mot de passe</label>
+            <input name="password" type="password" id="password-alternative"
+                class="border border-gray-300 rounded-sm block w-full px-6 py-4 text-sm"
                 placeholder="••••••••" required />
         </div>
-        <div class="flex items-start mb-5">
-            <label for="remember-alternative" class="flex items-center h-5 gap-2">
-                <input id="remember-alternative" type="checkbox" value=""
-                    class="w-4 h-4  border border-default-medium rounded-xs bg-neutral-secondary-medium focus:ring-2 focus:ring-brand-soft"
-                    required />
-                <p class="ms-2 text-sm font-medium text-heading select-none">Je suis d'accord avec les <a href="#"
-                        class="text-fg-brand hover:underline">conditions d'utilisation</a>.</p>
-            </label>
-        </div>
+     
         <button type="submit"
             class="text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">Se
             connecter</button>
