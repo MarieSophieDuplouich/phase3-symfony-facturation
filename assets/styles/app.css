@@ -1,3 +1,40 @@
-body {
-    background-color: skyblue;
+@import "tailwindcss";
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
+
+body {
+    background-color: #F9FAFB;
+    font-family: 'Arimo', sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    min-height:100vh;
+}
+
+a,link{
+    text-decoration: none;
+    color: #155DFC;
+}
+button{
+    background-color: #155DFC;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover{
+    background-color: #0D3B9E;
+    color: white;
+}
+
