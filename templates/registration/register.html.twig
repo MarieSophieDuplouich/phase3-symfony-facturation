@@ -20,4 +20,70 @@
 
         <button type="submit" class="btn">Register</button>
     {{ form_end(registrationForm) }}
+
+    
+
+<header class="flex flex-col justify-center items-center gap-2 mb-5">
+
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 4V44L12 42L16 44L20 42L24 44L28 42L32 44L36 42L40 44V4L36 6L32 4L28 6L24 4L20 6L16 4L12 6L8 4Z"
+            stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        <path
+            d="M32 16H20C18.9391 16 17.9217 16.4214 17.1716 17.1716C16.4214 17.9217 16 18.9391 16 20C16 21.0609 16.4214 22.0783 17.1716 22.8284C17.9217 23.5786 18.9391 24 20 24H28C29.0609 24 30.0783 24.4214 30.8284 25.1716C31.5786 25.9217 32 26.9391 32 28C32 29.0609 31.5786 30.0783 30.8284 30.8284C30.0783 31.5786 29.0609 32 28 32H16"
+            stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M24 35V13" stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    <h1 class="text-2xl font-bold text-heading">Créez votre compte</h1>
+    <p> Ou <a href="#" class="font-medium text-fg-brand hover:underline"> connectez-vous</a> </p>
+
+</header>
+
+
+<main class=" rounded-lg shadow-md bg-white w-[480px] mb-5">
+
+    <form class="  flex flex-col gap-2 mb-5 ">
+        <div class="mb-5">
+            <div class="flex flex-col gap-2">
+                <label class="block mb-2.5 text-sm font-medium text-heading">Prénom</label>
+                <input name="first_name" type="text"
+                    class="border border-gray-300 rounded-sm block w-full px-6 py-4 text-sm"
+                    for="first_name" placeholder="Jean" required />
+                <label class="block mb-2.5 text-sm font-medium text-heading">Nom</label>
+                <input name="last_name" type="text"
+                    class="border border-gray-300 rounded-sm  block w-full px-6 py-4 text-sm"
+                    for="last_name" placeholder="Dupont" required />
+            </div>
+        </div>
+        <div class="mb-5">
+            <label for="company_name" class="block mb-2.5 text-sm font-medium text-heading">Raison sociale</label>
+            <input name="company_name" type="text" id="company_name"
+                class="border border-gray-300  rounded-sm block w-full px-6 py-4 text-sm"
+                placeholder="Tech Solutions" required />
+        </div>
+        <div class="mb-5">
+            <label for="iban" class="block mb-2.5 text-sm font-medium text-heading">Iban</label>
+            <input name="iban" type="text" id="iban"
+                class="border border-gray-300 rounded-sm  block w-full px-6 py-4 text-sm"
+                placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX" required />
+        </div>
+        <div class="mb-5">
+            <label for="email-alternative" class="block mb-2.5 text-sm font-medium text-heading">Adresse Email</label>
+            <input name="email" type="email" id="email-alternative"
+                class="border border-gray-300 rounded-sm  block w-full px-6 py-4 text-sm"
+                placeholder="contact@entreprise.fr" required />
+        </div>
+        <div class="mb-5">
+            <label for="password-alternative" class="block mb-2.5 text-sm font-medium text-heading">Mot de passe</label>
+            <input name="password" type="password" id="password-alternative"
+                class="border border-gray-300 rounded-sm  block w-full px-6 py-4 text-sm"
+                placeholder="••••••••" required />
+        </div>
+        <button type="submit"
+            class="text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">Créer
+            mon compte</button>
+    </form>
+</main>
+
+
+
 {% endblock %}
