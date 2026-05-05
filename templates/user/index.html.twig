@@ -3,7 +3,7 @@
 {% block title %}Login{% endblock %}
 
 {% block body %}
-   
+   <div class="flex flex-col justify-center items-center gap-4 mt-10">
     <header class="flex flex-col justify-center items-center gap-2 mb-5">
        
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -20,26 +20,26 @@
     </header>
 
 
-   <main class="  shadow-md  bg-white w-96 h-96 rounded-lg">
+   <main class=" w-[480px] shadow-md  bg-white  rounded-sm">
   
-    <form class="flex flex-col justify-center items-center p-6 gap-2 mb-5">
-        <div class="mb-5 w-full">
-            <label for="email-alternative" class="mb-2.5 text-sm font-medium text-heading">Adresse Email</label>
+    <form class="flex flex-col justify-center items-center p-6 gap-4 mb-5">
+        <div class="mb-5  flex flex-col justify-start items-start gap-2">
+            <label for="email-alternative" class=" block mb-2.5 text-md font-medium text-heading">Adresse Email</label>
             <input name="email" type="email" id="email-alternative"
-                class="border border-gray-300 rounded-sm  w-full px-6 py-4 text-sm"
+                class="border border-gray-300 rounded-sm w-full px-4 py-3 text-md"
                placeholder="contact@entreprise.fr" required />
         </div>
-        <div class="mb-5 w-full">
-            <label for="password-alternative" class=" mb-2.5 text-sm font-medium text-heading">Mot de passe</label>
+        <div class="mb-5  flex flex-col justify-start items-start gap-2">
+            <label for="password-alternative" class=" block mb-2.5 text-md font-medium text-heading">Mot de passe</label>
             <input name="password" type="password" id="password-alternative"
-                class="border border-gray-300 rounded-sm block w-full px-6 py-4 text-sm"
+                class="border border-gray-300 rounded-sm w-full px-4 py-3 text-md"
                 placeholder="••••••••" required />
         </div>
      
         <button type="submit"
-            class="text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none">Se
+            class="text-white bg-brand box-border border border-transparent hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-md px-4 py-2.5 focus:outline-none">Se
             connecter</button>
     </form>
  </main>
-
+</div>
 {% endblock %}
