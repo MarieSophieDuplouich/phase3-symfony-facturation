@@ -2,7 +2,11 @@
 
 namespace App\Controller;
 
+
+use App\Form\ProfileFormType;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
@@ -35,9 +39,21 @@ class SecurityController extends AbstractController
         return $this->render('security/logout.html.twig');
     }
 
-    #[Route(path:'/profile',name:'app_profile')]
-    public function profile():Response
+    #[Route(path: '/profile', name: 'app_profile')]
+    public function profile(Request $request, EntityManagerInterface $entityManager): Response
     {
-        return $this->render('security/profile.html.twig');
+        $user = $this->getUser();
+        $form = $this->createForm(ProfileFormType::class, $user);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->flush();
+            $this->addFlash('success', 'Profil mis à jour !');
+            return $this->redirectToRoute('app_profile');
+        }
+
+        return $this->render('security/profile.html.twig', [
+            'registrationForm' => $form,
+        ]);
     }
 }
