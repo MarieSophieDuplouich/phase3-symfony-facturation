@@ -1,0 +1,107 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Profil{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[#f8fafc]">
+    <div class="flex min-h-screen">
+        <aside class="w-56 min-h-screen bg-white flex flex-col py-4 gap-1 shrink-0 border-r border-gray-200">
+
+            <div class="px-3 pb-4 border-b border-gray-200 mb-2">
+                <a href="#"
+                    class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-[#030213]/8 text-[#030213] text-sm font-medium hover:bg-[#030213]/12 transition-colors">
+                    <svg class="w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4" />
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                    Toutes les tâches
+                </a>
+            </div>
+
+            <div class="px-3 flex flex-col gap-0.5">
+                <p class="text-[11px] font-medium tracking-widest uppercase text-[#030213]/30 ml-3 mb-2">Dossiers</p>
+
+                <a href="#"
+                    class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-[#030213]/75 text-sm hover:bg-[#030213]/8 hover:text-[#030213] transition-colors">
+                    <span class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full shrink-0"></span>
+
+                        <svg class="w-3 h-3 shrink-0 text-[#030213]/60" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                       
+                    </span>
+                    <span class="bg-[#030213]/10 text-[#030213]/50 text-[11px] px-1.5 py-0.5 rounded-full"></span>
+                </a>
+                
+                <p class="text-xs text-[#030213]/30 px-3 py-2">Aucun dossier</p>
+             
+            </div>
+
+            <div class="mt-auto px-3 pt-3 border-t border-gray-200">
+                <a href="#"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-[#030213]/40 text-xs hover:text-[#030213]/70 hover:bg-[#030213]/5 transition-colors">
+                    <svg class="w-3 h-3 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                    </svg>
+                    Gérer priorités
+                </a>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-8 bg-[#f8fafc]">
+            <div class="max-w-4xl mx-auto">
+                <div class="mb-8">
+                    <h1 class="text-3xl font-semibold text-[#030213]">Profil</h1>
+                    <p class="mt-2 text-sm text-[#030213]/70">Mettez à jour les informations de votre entreprise.</p>
+                </div>
+
+                <section class="bg-white rounded-3xl shadow-sm border border-gray-200 p-8">
+                    <div class="mb-8">
+                        <h2 class="text-xl font-semibold text-[#030213]">Informations de facturation</h2>
+                        <p class="mt-2 text-sm text-[#030213]/70">Complétez vos coordonnées pour gérer votre compte.</p>
+                    </div>
+
+                    <form action="#" method="post" class="grid gap-6">
+                        <div class="grid gap-2">
+                            <label for="raison_sociale" class="text-sm font-medium text-[#030213]">Raison Sociale</label>
+                            <input id="raison_sociale" name="raison_sociale" type="text" placeholder="Entrez la raison sociale"
+                                class="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2 focus:ring-[#030213]/20" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <label for="siret" class="text-sm font-medium text-[#030213]">Numéro SIRET (Optionnel)</label>
+                            <input id="siret" name="siret" type="text" placeholder="123 456 789 00000"
+                                class="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2 focus:ring-[#030213]/20" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <label for="iban" class="text-sm font-medium text-[#030213]">IBAN</label>
+                            <input id="iban" name="iban" type="text" placeholder="FR76 1234 5678 9012 3456 7890 123"
+                                class="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2 focus:ring-[#030213]/20" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <label for="conditions" class="text-sm font-medium text-[#030213]">Conditions générales</label>
+                            <textarea id="conditions" name="conditions" rows="5" placeholder="Entrez les conditions générales"
+                                class="w-full rounded-2xl border border-gray-200 bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2 focus:ring-[#030213]/20"></textarea>
+                        </div>
+
+                        <button type="submit"
+                            class="inline-flex items-center justify-center rounded-2xl bg-[#030213] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#030213]/90">
+                            Enregistrer les modifications
+                        </button>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
