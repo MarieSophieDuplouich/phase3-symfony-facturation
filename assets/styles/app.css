@@ -13,12 +13,6 @@
 body {
     background-color: #F9FAFB;
     font-family: 'Arimo', sans-serif;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 2rem;
-    min-height:100vh;
 }
 
 link{
