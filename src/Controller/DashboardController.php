@@ -10,7 +10,9 @@ final class DashboardController extends AbstractController
 {
     #[Route('/dashboard', name: 'app_dashboard')]
     public function index(): Response
-    {
+    {  
+         $this->denyAccessUnlessGranted('ROLE_USER');
+         
         return $this->render('dashboard/index.html.twig', [
             'controller_name' => 'DashboardController',
         ]);
