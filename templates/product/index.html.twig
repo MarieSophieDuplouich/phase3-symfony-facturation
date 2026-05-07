@@ -153,7 +153,7 @@
         </div>
 
         <div class="flex flex-col justify-center items-center">
-        <table class="table border-collapse border border-gray-200">
+        <table class="table border-collapse border border-gray-200 ">
             <thead>
                 <tr>
 
@@ -166,12 +166,12 @@
             </thead>
             <tbody>
                 {% for product in products %}
-                <tr class="bg-white">
+                <tr class="bg-white hover:bg-[#0D3B9E] hover:text-white transition-colors duration-200">
 
-                    <td class="bg-white">{{ product.name }}</td>
-                    <td class="bg-white">{{ product.description }}</td>
-                    <td class="bg-white">{{ product.price }}</td>
-                    <td class="bg-white">{{ product.unit }}</td>
+                    <td >{{ product.name }}</td>
+                    <td>{{ product.description }}</td>
+                    <td >{{ product.price }}</td>
+                    <td >{{ product.unit }}</td>
                     <td class="flex flex-row gap-2">
                         <a href="{{ path('app_product_show', {'id': product.id}) }}"><svg width="17" height="17"
                                 xmlns="http://www.w3.org/2000/svg"
