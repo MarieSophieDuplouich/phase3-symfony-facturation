@@ -137,8 +137,23 @@
     </aside>
 
     <main class="flex-1 p-8 bg-[#f8fafc]">
-        <h1 class="text-2xl font-semibold text-gray-900 mb-8">Produits & Services</h1>
-        <table class="table">
+        <div class="flex flex-row justify-between">
+            <h1 class="text-2xl font-semibold text-gray-900 mb-8">Produits & Services</h1>
+            <a class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition"
+                href="{{ path('app_product_new') }}">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0.75 6H11.25" stroke="white" stroke-width="1.5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path d="M6 0.75V11.25" stroke="white" stroke-width="1.5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+
+                Ajouter un produit
+            </a>
+        </div>
+
+        <div class="flex flex-col justify-center items-center">
+        <table class="table border-collapse border border-gray-200">
             <thead>
                 <tr>
 
@@ -153,10 +168,10 @@
                 {% for product in products %}
                 <tr class="bg-white">
 
-                    <td class="bg-violet-900">{{ product.name }}</td>
-                    <td class="bg-violet-900">{{ product.description }}</td>
-                    <td class="bg-violet-900">{{ product.price }}</td>
-                    <td class="bg-violet-900">{{ product.unit }}</td>
+                    <td class="bg-white">{{ product.name }}</td>
+                    <td class="bg-white">{{ product.description }}</td>
+                    <td class="bg-white">{{ product.price }}</td>
+                    <td class="bg-white">{{ product.unit }}</td>
                     <td class="flex flex-row gap-2">
                         <a href="{{ path('app_product_show', {'id': product.id}) }}"><svg width="17" height="17"
                                 xmlns="http://www.w3.org/2000/svg"
@@ -199,17 +214,7 @@
             </tbody>
         </table>
 
-        <a class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition"
-            href="{{ path('app_product_new') }}">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0.75 6H11.25" stroke="white" stroke-width="1.5" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                <path d="M6 0.75V11.25" stroke="white" stroke-width="1.5" stroke-linecap="round"
-                    stroke-linejoin="round" />
-            </svg>
-
-            Ajouter un produit
-        </a>
+</div>
 
     </main>
 </div>
