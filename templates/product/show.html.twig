@@ -1,42 +1,60 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Product{% endblock %}
+{% block title %}Détail du produit{% endblock %}
 
 {% block body %}
-    <h1>Product</h1>
+<div class="min-h-screen flex bg-[#F9FAFB]">
 
-    <table class="table">
-        <tbody>
-            <tr>
-                <th>Id</th>
-                <td>{{ product.id }}</td>
-            </tr>
-            <tr>
-                <th>Name</th>
-                <td>{{ product.name }}</td>
-            </tr>
-            <tr>
-                <th>Description</th>
-                <td>{{ product.description }}</td>
-            </tr>
-            <tr>
-                <th>Price</th>
-                <td>{{ product.price }}</td>
-            </tr>
-            <tr>
-                <th>Unit</th>
-                <td>{{ product.unit }}</td>
-            </tr>
-        </tbody>
-    </table>
+    <twig:NavAside />
 
-    <a href="{{ path('app_product_index') }}">back to list</a>
+    <div class="flex-1 flex flex-col justify-center items-center gap-8">
 
-    <a href="{{ path('app_product_edit', {'id': product.id}) }}">edit</a>
+        <header class="flex flex-col justify-center items-center gap-2 mb-5">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 4V44L12 42L16 44L20 42L24 44L28 42L32 44L36 42L40 44V4L36 6L32 4L28 6L24 4L20 6L16 4L12 6L8 4Z"
+                    stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                <path
+                    d="M32 16H20C18.9391 16 17.9217 16.4214 17.1716 17.1716C16.4214 17.9217 16 18.9391 16 20C16 21.0609 16.4214 22.0783 17.1716 22.8284C17.9217 23.5786 18.9391 24 20 24H28C29.0609 24 30.0783 24.4214 30.8284 25.1716C31.5786 25.9217 32 26.9391 32 28C32 29.0609 31.5786 30.0783 30.8284 30.8284C30.0783 31.5786 29.0609 32 28 32H16"
+                    stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M24 35V13" stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <h1 class="text-2xl font-bold text-heading">Détail du produit</h1>
+            <p>
+                <a href="{{ path('app_product_index') }}" class="font-medium text-[#155DFC] hover:underline">
+                    Retour à la liste des produits
+                </a>
+            </p>
+        </header>
 
+        <main class="rounded-lg shadow-md bg-white w-[480px] mb-5 p-6">
+            <div class="flex flex-col gap-4">
+                <div class="flex justify-between border-b border-gray-100 pb-3">
+                    <span class="text-sm font-medium text-gray-500">Nom</span>
+                    <span class="text-sm font-semibold text-gray-900">{{ product.name }}</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-100 pb-3">
+                    <span class="text-sm font-medium text-gray-500">Description</span>
+                    <span class="text-sm text-gray-900">{{ product.description }}</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-100 pb-3">
+                    <span class="text-sm font-medium text-gray-500">Prix</span>
+                    <span class="text-sm font-semibold text-gray-900">{{ product.price }} €</span>
+                </div>
+                <div class="flex justify-between pb-3">
+                    <span class="text-sm font-medium text-gray-500">Unité</span>
+                    <span class="text-sm text-gray-900">{{ product.unit }}</span>
+                </div>
+            </div>
 
+            <div class="flex gap-3 mt-6">
+                <a href="{{ path('app_product_edit', {'id': product.id}) }}"
+                    class="flex-1 text-center text-sm font-medium text-[#155DFC] border border-[#155DFC] rounded-sm px-4 py-2 hover:bg-blue-50">
+                    Modifier
+                </a>
+                {{ include('product/_delete_form.html.twig') }}
+            </div>
+        </main>
 
-    
-
-    {{ include('product/_delete_form.html.twig') }}
+    </div>
+</div>
 {% endblock %}
