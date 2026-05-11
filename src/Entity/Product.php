@@ -2,8 +2,8 @@
 
 namespace App\Entity;
 
+use App\Enum\Unit;
 use App\Repository\ProductRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
@@ -17,16 +17,17 @@ class Product
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
-    #[ORM\Column]
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2)]
     private ?float $price = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $unit = null;
+    #[ORM\Column(type: 'string', enumType: Unit::class)]
+    private ?Unit $unit = null;
 
     #[ORM\ManyToOne(inversedBy: 'products')]
+    #[ORM\JoinColumn(nullable: false)]
     private ?User $user = null;
 
     public function getId(): ?int
@@ -42,7 +43,6 @@ class Product
     public function setName(string $name): static
     {
         $this->name = $name;
-
         return $this;
     }
 
@@ -54,7 +54,6 @@ class Product
     public function setDescription(?string $description): static
     {
         $this->description = $description;
-
         return $this;
     }
 
@@ -66,19 +65,17 @@ class Product
     public function setPrice(float $price): static
     {
         $this->price = $price;
-
         return $this;
     }
 
-    public function getUnit(): ?string
+    public function getUnit(): ?Unit
     {
         return $this->unit;
     }
 
-    public function setUnit(string $unit): static
+    public function setUnit(Unit $unit): static
     {
         $this->unit = $unit;
-
         return $this;
     }
 
@@ -90,7 +87,6 @@ class Product
     public function setUser(?User $user): static
     {
         $this->user = $user;
-
         return $this;
     }
 }

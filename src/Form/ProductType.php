@@ -8,12 +8,18 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use App\Enum\Unit;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 
 class ProductType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('unit', EnumType::class, [
+                'class' => Unit::class,
+                'label' => 'Unité',
+            ])
             ->add('name')
             ->add('description')
             ->add('price')
