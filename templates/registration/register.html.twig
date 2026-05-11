@@ -3,75 +3,88 @@
 {% block title %}Inscription{% endblock %}
 
 {% block body %}
+
 <body class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen">
-<header class="flex flex-col justify-center items-center gap-2 mb-5">
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 4V44L12 42L16 44L20 42L24 44L28 42L32 44L36 42L40 44V4L36 6L32 4L28 6L24 4L20 6L16 4L12 6L8 4Z"
-            stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-        <path
-            d="M32 16H20C18.9391 16 17.9217 16.4214 17.1716 17.1716C16.4214 17.9217 16 18.9391 16 20C16 21.0609 16.4214 22.0783 17.1716 22.8284C17.9217 23.5786 18.9391 24 20 24H28C29.0609 24 30.0783 24.4214 30.8284 25.1716C31.5786 25.9217 32 26.9391 32 28C32 29.0609 31.5786 30.0783 30.8284 30.8284C30.0783 31.5786 29.0609 32 28 32H16"
-            stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-        <path d="M24 35V13" stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>
-    <h1 class="text-2xl font-bold text-heading">Créez votre compte</h1>
-    <p>Ou <a href="{{ path('app_login') }}" class="font-medium text-[#155DFC] hover:underline">connectez-vous</a></p>
-</header>
+    <header class="flex flex-col justify-center items-center gap-2 mb-5">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 4V44L12 42L16 44L20 42L24 44L28 42L32 44L36 42L40 44V4L36 6L32 4L28 6L24 4L20 6L16 4L12 6L8 4Z"
+                stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path
+                d="M32 16H20C18.9391 16 17.9217 16.4214 17.1716 17.1716C16.4214 17.9217 16 18.9391 16 20C16 21.0609 16.4214 22.0783 17.1716 22.8284C17.9217 23.5786 18.9391 24 20 24H28C29.0609 24 30.0783 24.4214 30.8284 25.1716C31.5786 25.9217 32 26.9391 32 28C32 29.0609 31.5786 30.0783 30.8284 30.8284C30.0783 31.5786 29.0609 32 28 32H16"
+                stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M24 35V13" stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <h1 class="text-2xl font-bold text-heading">Créez votre compte</h1>
+        <p>Ou <a href="{{ path('app_login') }}" class="font-medium text-[#155DFC] hover:underline">connectez-vous</a>
+        </p>
+    </header>
 
-<main class="rounded-lg shadow-md bg-white w-[480px] mb-5">
+    <main class="rounded-lg shadow-md bg-white w-[480px] mb-5">
 
-    {{ form_start(registrationForm, {'attr': {'class': 'flex flex-col gap-2 p-6'}}) }}
+        {{ form_start(registrationForm, {'attr': {'class': 'flex flex-col gap-2 p-6'}}) }}
 
-    <div class="mb-5">
-        <div class="flex flex-col gap-2">
-            <label class="block mb-2.5 text-sm font-medium text-heading">Prénom</label>
-  
+        <div class="mb-5">
+            <div class="flex flex-col gap-2">
+                <label class="block mb-2.5 text-sm font-medium text-heading">Prénom</label>
 
-            {{form_widget(registrationForm.firstName, {'attr': {'class': 'border border-gray-300 rounded-sm block
-            w-full px-6
-            py-4 text-sm', 'placeholder': 'Jean'}})}}
- 
 
-            {{form_widget(registrationForm.lastName, {'attr': {'class': 'border border-gray-300 rounded-sm block w-full
-            px-6
-            py-4 text-sm', 'placeholder': 'Dupont'}})}}
+                {{form_widget(registrationForm.firstName, {'attr': {'class': 'border border-gray-300 rounded-sm block
+                w-full px-6
+                py-4 text-sm', 'placeholder': 'Jean'}})}}
+
+
+                {{form_widget(registrationForm.lastName, {'attr': {'class': 'border border-gray-300 rounded-sm block
+                w-full
+                px-6
+                py-4 text-sm', 'placeholder': 'Dupont'}})}}
+            </div>
         </div>
-    </div>
 
-    <div class="mb-5">
-        <label class="block mb-2.5 text-sm font-medium text-heading">Raison sociale</label>
-  
-        {{form_widget(registrationForm.companyName, {'attr': {'class': 'border border-gray-300 rounded-sm block w-full
-        px-6
-        py-4 text-sm', 'placeholder': 'Tech Solutions'}})}}
-    </div>
+        <div class="mb-5">
+            <label class="block mb-2.5 text-sm font-medium text-heading">Raison sociale</label>
 
-    <div class="mb-5">
-        <label class="block mb-2.5 text-sm font-medium text-heading">IBAN</label>
-        {{ form_widget(registrationForm.iban, {'attr': {'class': 'border border-gray-300 rounded-sm block w-full px-6
-        py-4 text-sm', 'placeholder': 'FR76 XXXX XXXX XXXX XXXX XXXX XXX'}}) }}
-    </div>
+            {{form_widget(registrationForm.companyName, {'attr': {'class': 'border border-gray-300 rounded-sm block
+            w-full
+            px-6
+            py-4 text-sm', 'placeholder': 'Tech Solutions'}})}}
+        </div>
 
-    <div class="mb-5">
-        <label class="block mb-2.5 text-sm font-medium text-heading">Adresse Email</label>
-        {{ form_widget(registrationForm.email, {'attr': {'class': 'border border-gray-300 rounded-sm block w-full px-6
-        py-4 text-sm', 'placeholder': 'contact@entreprise.fr'}}) }}
-    </div>
+        <div class="mb-5">
+            <label class="block mb-2.5 text-sm font-medium text-heading">IBAN</label>
+            {{ form_widget(registrationForm.iban, {'attr': {'class': 'border border-gray-300 rounded-sm block w-full
+            px-6
+            py-4 text-sm', 'placeholder': 'FR76 XXXX XXXX XXXX XXXX XXXX XXX'}}) }}
+        </div>
 
-    <div class="mb-5">
-        <label class="block mb-2.5 text-sm font-medium text-heading">Mot de passe</label>
-        {{ form_widget(registrationForm.plainPassword, {'attr': {'class': 'border border-gray-300 rounded-sm block
-        w-full px-6 py-4 text-sm', 'placeholder': '••••••••'}}) }}
-    </div>
+        <div class="mb-5">
+            <label class="block mb-2.5 text-sm font-medium text-heading">Adresse Email</label>
+            {{ form_widget(registrationForm.email, {'attr': {'class': 'border border-gray-300 rounded-sm block w-full
+            px-6
+            py-4 text-sm', 'placeholder': 'contact@entreprise.fr'}}) }}
+        </div>
 
-    {{ form_widget(registrationForm.agreeTerms) }}
 
-    <button type="submit"
-        class="w-full text-white bg-brand border border-transparent hover:bg-brand-strong font-medium rounded-base text-sm px-4 py-2.5">
-        Créer mon compte
-    </button>
+        <div class="mb-5">
+            <label class="block mb-2.5 text-sm font-medium text-heading">Mot de passe</label>
+            {{ form_widget(registrationForm.plainPassword, {'attr': {'class': 'border border-gray-300 rounded-sm block
+            w-full px-6 py-4 text-sm', 'placeholder': '••••••••'}}) }}
+        </div>
+        <div class="mb-5 flex justify-center items-center gap-3">
+            {{ form_widget(registrationForm.agreeTerms, {
+            'attr': {'class': 'w-4 h-4 border border-gray-300 rounded-sm cursor-pointer'}
+            }) }}
+            <label class="text-sm font-medium text-heading cursor-pointer">
+                Accepter les conditions
+            </label>
+        </div>
 
-    {{ form_end(registrationForm) }}
+        <button type="submit"
+            class="w-full text-white bg-brand border border-transparent hover:bg-brand-strong font-medium rounded-base text-sm px-4 py-2.5">
+            Créer mon compte
+        </button>
 
-</main>
+        {{ form_end(registrationForm) }}
+
+    </main>
 </body>
 {% endblock %}
