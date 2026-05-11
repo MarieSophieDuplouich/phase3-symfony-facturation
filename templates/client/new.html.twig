@@ -29,5 +29,37 @@
 
     </main>
 </div>
+ <div>
+        <h2>Clients existants</h2>
+        <table class="table border-collapse border border-gray-200 ">
+            <thead>
+                <tr>
 
+                      <th class="p-4">Nom</th>
+                        <th class="p-4">Email</th>
+                        <th class="p-4">Téléphone</th>
+                        <th class="p-4">Adresse</th>
+                        <th class="p-4">SIRET</th>
+                        <th class="p-4">RIB</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in client %}
+                <tr class="bg-white hover:bg-[#0D3B9E] hover:text-white transition-colors duration-200">
+
+                    <td>{{ client.name }}</td>
+                    <td>{{ client.email }}</td>
+                    <td>{{ client.phone }}</td>
+                    <td>{{ client.address }}</td>
+                    <td>{{ client.siret }}</td>
+                    <td>{{ client.rib }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">aucun enregistrement trouvé</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% endblock %}
