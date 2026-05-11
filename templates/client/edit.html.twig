@@ -1,13 +1,39 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Edit Client{% endblock %}
+{% block title %}Modifier Client{% endblock %}
 
 {% block body %}
-    <h1>Edit Client</h1>
 
-    {{ include('client/_form.html.twig', {'button_label': 'Update'}) }}
+<div class="min-h-screen flex bg-[#f8fafc]">
 
-    <a href="{{ path('app_client_index') }}">back to list</a>
+    <twig:NavAside/>
 
-    {{ include('client/_delete_form.html.twig') }}
+    <main class="flex-1 p-8">
+
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-semibold text-gray-900">
+                Modifier le client
+            </h1>
+
+            <a href="{{ path('app_client_index') }}"
+               class="text-sm text-gray-600 hover:text-gray-900">
+                ← Retour
+            </a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
+
+            {{ include('client/_form.html.twig', {'button_label': 'Mettre à jour'}) }}
+
+        </div>
+
+        <div class="mt-4">
+
+            {{ include('client/_delete_form.html.twig') }}
+
+        </div>
+
+    </main>
+</div>
+
 {% endblock %}
