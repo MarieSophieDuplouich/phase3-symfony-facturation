@@ -1,4 +1,4 @@
-// config/packages/mailer.php
+<?php // config/packages/mailer.php
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 return App::config([
