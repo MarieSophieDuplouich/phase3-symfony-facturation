@@ -13,22 +13,14 @@ final class MailController extends AbstractController
     #[Route('/mail', name: 'app_mail')]
     public function index(MailerInterface $mailer): Response
     {
-        
-        $file_resource = tmpFile();
-        fwrite($file_resource, "Ceci est le contenu du fichier à attacher au mail !");
-
-        $email = new Email();
-        $email->from("website@cool.com")
-            ->to("ms.duplouichiscod@gmail.com")
-            ->subject("Ceci est un mail Test sujet")
-            ->attach($file_resource, "bienvenuecheznous.txt")
-            ->text("Ceci est un mail Test texte");
+        $email = (new Email())
+            ->from('test@test.com')
+            ->to('ms.duplouichiscod@gmail.com')
+            ->subject('Test Mailpit')
+            ->text('Bonjour depuis Symfony');
 
         $mailer->send($email);
 
-
-        return $this->render('mail/index.html.twig', [
-            'controller_name' => 'MailController',
-        ]);
+        return new Response('Mail envoyé');
     }
 }
