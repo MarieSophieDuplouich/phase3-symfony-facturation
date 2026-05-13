@@ -39,7 +39,7 @@
                 <div class="py-20 text-center">
                     <p class="text-sm text-gray-400">Aucune facture trouvée.</p>
                     <a href="{{ path('app_invoice_new') }}" class="mt-2 inline-block text-blue-600 text-sm hover:underline">
-                        Créer votre première facture →
+                        Créer votre première facture
                     </a>
                 </div>
             {% else %}
@@ -63,7 +63,7 @@
                             </td>
 
                             <td class="px-4 py-4 text-sm text-gray-500">
-                                {{ invoice.issuedAt|date('d/m/Y') }}
+                                {{ invoice.createdAt|date('d/m/Y') }}
                             </td>
 
                             <td class="px-4 py-4 text-sm text-gray-700">
@@ -102,12 +102,12 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
 
-                                    {% if invoice.isDraft() %}
+                                   {% if invoice.status == 'draft' %}
                                         <a href="{{ path('app_invoice_edit', {id: invoice.id}) }}"
                                            title="Modifier"
                                            class="p-1.5 text-gray-400 hover:text-[#155DFC] hover:bg-blue-50 rounded-lg transition-colors">
                                             <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.3321 0.744853 15.401 0.761464 15.4667C0.778075 15.5323 0.812141 15.5922 0.860048 15.64C0.907955 15.6879 0.967916 15.7218 1.03357 15.7383C1.09922 15.7548 1.16812 15.7533 1.23295 15.7338L4.4977 14.7438C4.73258 14.6724 4.94633 14.5444 5.1202 14.371L15.1305 4.35929Z"
+                                                <path d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.332１ 0.744853 １５．４０１ ０．７６１４６４ １５．４６６７C０．７７８０７５ １５．５３２３ ０．８１２１４１ １５．５９２２ ０．８６００４８ １５．６４C０．９０７９５５ １５．６８７９ ０．９６７９１６ １５．７２１８ １．０３３５７ １５．７３８３C１．０９９２２ １５．７５４８ １．１６８１２ １５．７５３３ １．２３２９５ １５．７３３８L４．４９７７ １４．７４３８C４．７３２５８ １４．６７２４ 
                                                     stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
                                         </a>
@@ -122,7 +122,7 @@
                                         Détails
                                     </a>
 
-                                    {% if invoice.isDeletable() %}
+                                    {% if invoice.status == 'draft' %}
                                         <form method="post" action="{{ path('app_invoice_delete', {id: invoice.id}) }}"
                                               onsubmit="return confirm('Supprimer ce brouillon ?')">
                                             <input type="hidden" name="_token" value="{{ csrf_token('delete_' ~ invoice.id) }}">

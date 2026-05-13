@@ -1,4 +1,105 @@
-{{ form_start(form) }}
-    {{ form_widget(form) }}
-    <button class="btn">{{ button_label|default('Save') }}</button>
+{{ form_start(form, {attr: {class: 'flex flex-col gap-5'}}) }}
+
+<div class="flex items-center justify-between mb-7">
+    <div class="flex items-center gap-2.5">
+        <h2 class="text-lg font-semibold text-gray-900">Nouvelle facture</h2>
+    </div>
+
+    <a href="{{ path('app_invoice_index') }}"
+       class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+             xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 5L5 15" stroke="#99A1AF" stroke-width="1.66667"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 5L15 15" stroke="#99A1AF" stroke-width="1.66667"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </a>
+</div>
+
+<div class="grid grid-cols-2 gap-4">
+
+    <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1.5">
+            Numéro de facture
+        </label>
+
+        {{ form_widget(form.number, {attr: {
+            class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+            placeholder: 'Ex : FAC-2026-001'
+        }}) }}
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1.5">
+            Statut
+        </label>
+
+        {{ form_widget(form.status, {attr: {
+            class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+        }}) }}
+    </div>
+
+</div>
+
+<div>
+    <label class="block text-sm font-medium text-gray-600 mb-1.5">
+        Client
+    </label>
+
+    {{ form_widget(form.client, {attr: {
+        class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+    }}) }}
+</div>
+
+<div class="grid grid-cols-2 gap-4">
+
+    <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1.5">
+            Total TTC (€)
+        </label>
+
+        {{ form_widget(form.totalTtc, {attr: {
+            class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+            placeholder: '0.00'
+        }}) }}
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1.5">
+            Date de création
+        </label>
+
+        {{ form_widget(form.createdAt, {attr: {
+            class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+        }}) }}
+    </div>
+
+</div>
+
+<div class="flex justify-end gap-2 pt-4 mt-1 border-t border-gray-100">
+
+    <a href="{{ path('app_invoice_index') }}"
+       class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+        Annuler
+    </a>
+
+    <button type="submit"
+            class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-[#155DFC] hover:bg-blue-700 active:scale-95 rounded-lg transition-all">
+
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="w-4 h-4"
+             fill="none"
+             viewBox="0 0 24 24"
+             stroke="currentColor"
+             stroke-width="2.5">
+            <path stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m4.5 12.75 6 6 9-13.5"/>
+        </svg>
+
+        Enregistrer
+    </button>
+</div>
+
 {{ form_end(form) }}

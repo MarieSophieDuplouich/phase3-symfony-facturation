@@ -23,15 +23,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 180)]
     private ?string $email = null;
 
-    /**
-     * @var list<string> The user roles
-     */
     #[ORM\Column]
     private array $roles = [];
 
-    /**
-     * @var string The hashed password
-     */
     #[ORM\Column]
     private ?string $password = null;
 
@@ -84,45 +78,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setEmail(string $email): static
     {
         $this->email = $email;
-
         return $this;
     }
 
-    /**
-     * A visual identifier that represents this user.
-     *
-     * @see UserInterface
-     */
     public function getUserIdentifier(): string
     {
         return (string) $this->email;
     }
 
-    /**
-     * @see UserInterface
-     */
     public function getRoles(): array
     {
         $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
         $roles[] = 'ROLE_USER';
-
         return array_unique($roles);
     }
 
-    /**
-     * @param list<string> $roles
-     */
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
-
         return $this;
     }
 
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
     public function getPassword(): ?string
     {
         return $this->password;
@@ -131,19 +107,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPassword(string $password): static
     {
         $this->password = $password;
-
         return $this;
-    }
-
-    /**
-     * Ensure the session doesn't contain actual password hashes by CRC32C-hashing them, as supported since Symfony 7.3.
-     */
-    public function __serialize(): array
-    {
-        $data = (array) $this;
-        $data["\0" . self::class . "\0password"] = hash('crc32c', $this->password);
-
-        return $data;
     }
 
     public function isVerified(): bool
@@ -154,7 +118,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setIsVerified(bool $isVerified): static
     {
         $this->isVerified = $isVerified;
-
         return $this;
     }
 
@@ -166,7 +129,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCompanyName(string $company_name): static
     {
         $this->company_name = $company_name;
-
         return $this;
     }
 
@@ -178,7 +140,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setIban(string $iban): static
     {
         $this->iban = $iban;
-
         return $this;
     }
 
@@ -186,6 +147,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->siret;
     }
+
     public function setSiret(?string $siret): static
     {
         $this->siret = $siret;
@@ -200,7 +162,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastName(string $last_name): static
     {
         $this->last_name = $last_name;
-
         return $this;
     }
 
@@ -212,7 +173,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setFirstName(string $first_name): static
     {
         $this->first_name = $first_name;
-
         return $this;
     }
 
@@ -230,19 +190,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $this->products->add($product);
             $product->setUser($this);
         }
-
         return $this;
     }
 
     public function removeProduct(Product $product): static
     {
         if ($this->products->removeElement($product)) {
-            // set the owning side to null (unless already changed)
             if ($product->getUser() === $this) {
                 $product->setUser(null);
             }
         }
-
         return $this;
     }
 
@@ -260,19 +217,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $this->clients->add($client);
             $client->setUser($this);
         }
-
         return $this;
     }
 
     public function removeClient(Client $client): static
     {
         if ($this->clients->removeElement($client)) {
-            // set the owning side to null (unless already changed)
             if ($client->getUser() === $this) {
                 $client->setUser(null);
             }
         }
-
         return $this;
     }
 }
