@@ -1,4 +1,14 @@
 {{ form_start(form) }}
-    {{ form_widget(form) }}
-    <button class="btn">{{ button_label|default('Save') }}</button>
+{{ form_widget(form) }}
+
+ <div class="flex justify-end gap-2 mt-2">
+      <a href="{{ path('app_client_index') }}"
+           class="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          Annuler
+        </a>
+<button
+    class="btn px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">{{
+    button_label|default('Enregistrer') }}</button>
+
+</div>
 {{ form_end(form) }}
