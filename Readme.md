@@ -1,3 +1,46 @@
+# Rédigez un Readme qui explique comment lancer l'application à partir d'un serveur ou d'un PC neuf
+-  Cloner le projet avec la commande suivante :
+
+```bash
+git clone https://github.com/CHAOUCHI/phase3-symfony-facturation.git
+```
+
+  - cd /home/user/Bureau/phase3-symfony-facturation
+  - ouvrir le projet via Visual Studio Code avec la commande suivante :
+    ```bash
+    code .
+ -  ```bash
+    composer -v
+    ```
+ -  composer install
+ - composer -v affiche Composer version 2.9.5 2026-01-29 11:40:53
+ -  composer -v
+ -  composer install
+ - composer -v affiche Composer version 2.9.5 2026-01-29 11:40:53
+ - php -v
+ - symfony check:requirements                
+ - symfony -V affiche (Symfony CLI version 5.15.1 (c) 2021-2026 Fabien Potencier (2025-10-04T08:05:57Z - stable))
+ - symfony help
+ - installer les dépendances manquantes
+ - vérifier le .env
+
+# lancer le projet
+- symfony server:start
+- symfony console tailwind:build --watch
+- symfony console clear:cache ci-besoin
+- travailler sur le projet
+- symfony server:stop
+
+# pour mysqlite
+- ouvrir un terminal à part
+```bash
+cd  /home/user/Bureau/phase3-symfony-facturation
+cd var/data_dev.db
+sqlitebrowser var/data_dev.db
+``` 
+
+
+
 # Cahier des charges
 Lien du Cahier des charges : https://github.com/CHAOUCHI/cdpi-dwwm/blob/phase3-symfony-docker-test/Phase%203%20-%20Symfony%20Docker%20et%20Test/Symfony/Projets/SaaSFacturation/Cahier%20des%20charges.md
 
