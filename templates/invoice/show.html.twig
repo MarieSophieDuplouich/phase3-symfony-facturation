@@ -34,5 +34,80 @@
 </a>
 {% endif %}
 
+<div class="flex items-center gap-3 mt-6">
+
+    {# BROUILLON #}
+    {% if invoice.isDraft() %}
+    <span class="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+        Brouillon
+    </span>
+    {% endif %}
+
+    {# EN ATTENTE #}
+    {% if invoice.isPending() %}
+    <span class="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+        En attente de paiement
+    </span>
+    {% endif %}
+
+    {# PAYÉE #}
+    {% if invoice.isPaid() %}
+    <span class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+        Payée
+    </span>
+    {% endif %}
+
+    {# ANNULÉE #}
+    {% if invoice.isCancelled() %}
+    <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+        Annulée
+    </span>
+    {% endif %}
+
+</div>
+
+
+
+<!-- Ce sont les boutons ci-dessous qui s'affichent tout le temps -->
+<div class="flex items-center gap-3 mt-8">
+
+    {# Modifier uniquement si brouillon #}
+    {% if invoice.isDraft() %}
+    <a href="{{ path('app_invoice_edit', {id: invoice.id}) }}"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
+        Modifier
+    </a>
+    {% endif %}
+
+    {# Valider facture uniquement si brouillon #}
+    {% if invoice.isDraft() %}
+    <form method="post" action="{{ path('app_invoice_validate', {id: invoice.id}) }}">
+
+        <button class="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm">
+            Valider la facture
+        </button>
+    </form>
+    {% endif %}
+
+    {# Marquer comme payée uniquement si en attente #}
+    {% if invoice.isPending() %}
+    <form method="post" action="{{ path('app_invoice_paid', {id: invoice.id}) }}"
+        onsubmit="return confirm('Confirmer le paiement de cette facture ?');">
+
+        <button class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm">
+            Valider le paiement
+        </button>
+    </form>
+    {% endif %}
+
+    {# PDF uniquement si validée ou payée #}
+    {% if invoice.isPending() or invoice.isPaid() %}
+    <a href="{{ path('app_invoice_pdf', {id: invoice.id}) }}" target="_blank"
+        class="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm">
+        Télécharger PDF
+    </a>
+    {% endif %}
+
+</div>
 {{ include('invoice/_delete_form.html.twig') }}
 {% endblock %}
