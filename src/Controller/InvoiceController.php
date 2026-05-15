@@ -50,8 +50,8 @@ final class InvoiceController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_invoice_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Invoice $invoice, EntityManagerInterface $entityManager): Response
+    #[Route('/{id}/edit', name: 'app_invoice_edit', methods: ['GET'])]
+    public function edit(Invoice $invoice): Response
     {
         if ($invoice->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
@@ -62,22 +62,10 @@ final class InvoiceController extends AbstractController
             return $this->redirectToRoute('app_invoice_show', ['id' => $invoice->getId()]);
         }
 
-        $form = $this->createForm(InvoiceType::class, $invoice);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $invoice->computeAndSaveTotalTtc();
-            $entityManager->flush();
-
-            return $this->redirectToRoute('app_invoice_index', [], Response::HTTP_SEE_OTHER);
-        }
-
         return $this->render('invoice/edit.html.twig', [
             'invoice' => $invoice,
-            'form'    => $form,
         ]);
     }
-
     #[Route('/{id}/validate', name: 'app_invoice_validate', methods: ['POST'])]
     public function validate(Invoice $invoice, EntityManagerInterface $entityManager): Response
     {
