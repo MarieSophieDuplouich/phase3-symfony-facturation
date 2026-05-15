@@ -15,6 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/invoice')]
 final class InvoiceController extends AbstractController
 {
+
     #[Route(name: 'app_invoice_index', methods: ['GET'])]
     public function index(Request $request, InvoiceRepository $invoiceRepository): Response
     {
@@ -31,29 +32,10 @@ final class InvoiceController extends AbstractController
         ]);
     }
 
-    #[Route('/new', name: 'app_invoice_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager, InvoiceRepository $invoiceRepository): Response
+    #[Route('/new', name: 'app_invoice_new', methods: ['GET'])]
+    public function new(): Response
     {
-        $invoice = new Invoice();
-        $form    = $this->createForm(InvoiceType::class, $invoice);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $invoice->setUser($this->getUser());
-            $invoice->setStatus(Status::DRAFT);
-            $invoice->setNumber($invoiceRepository->generateNextNumber());
-            $invoice->computeAndSaveTotalTtc();
-
-            $entityManager->persist($invoice);
-            $entityManager->flush();
-
-            return $this->redirectToRoute('app_invoice_index', [], Response::HTTP_SEE_OTHER);
-        }
-
-        return $this->render('invoice/new.html.twig', [
-            'invoice' => $invoice,
-            'form'    => $form,
-        ]);
+        return $this->render('invoice/new.html.twig');
     }
 
     #[Route('/{id}', name: 'app_invoice_show', methods: ['GET'])]
@@ -147,5 +129,4 @@ final class InvoiceController extends AbstractController
 
         return $this->redirectToRoute('app_invoice_index', [], Response::HTTP_SEE_OTHER);
     }
-
 }
