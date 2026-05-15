@@ -98,7 +98,7 @@ final class InvoiceController extends AbstractController
         return $this->redirectToRoute('app_invoice_show', ['id' => $invoice->getId()]);
     }
 
-    #[Route('/{id}', name: 'app_invoice_delete', methods: ['POST'])]
+    #[Route('/{id}/delete', name: 'app_invoice_delete', methods: ['POST'])]
     public function delete(Request $request, Invoice $invoice, EntityManagerInterface $entityManager): Response
     {
         if ($invoice->getUser() !== $this->getUser()) {
