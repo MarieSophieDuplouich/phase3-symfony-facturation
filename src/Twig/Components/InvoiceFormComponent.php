@@ -1,8 +1,8 @@
 <?php
 namespace App\Twig\Components;
 
-use App\Entity\InvoiceItem;
 use App\Entity\Invoice;
+use App\Entity\InvoiceItem;
 use App\Enum\Status;
 use App\Repository\ClientRepository;
 use App\Repository\InvoiceRepository;
@@ -10,6 +10,7 @@ use App\Repository\ProductRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
@@ -19,6 +20,9 @@ use Symfony\UX\LiveComponent\DefaultActionTrait;
 class InvoiceFormComponent extends AbstractController
 {
     use DefaultActionTrait;
+
+    #[LiveProp]
+    public ?int $invoiceId = null;
 
     #[LiveProp(writable: true)]
     public ?int $clientId = null;
@@ -41,8 +45,30 @@ class InvoiceFormComponent extends AbstractController
         private InvoiceRepository $invoiceRepository,
         private EntityManagerInterface $em,
         private Security $security,
-    ) {
+    ) {}
+
+    public function mount(?int $invoiceId = null): void
+    {
         $this->date = (new \DateTime())->format('Y-m-d');
+
+        if (!$invoiceId) return;
+
+        $invoice = $this->invoiceRepository->find($invoiceId);
+        if (!$invoice) return;
+
+        $this->invoiceId = $invoiceId;
+        $this->clientId  = $invoice->getClient()?->getId();
+        $this->date      = $invoice->getCreatedAt()->format('Y-m-d');
+
+        foreach ($invoice->getItems() as $item) {
+            $this->lines[] = [
+                'productId'   => $item->getProduct()->getId(),
+                'name'        => $item->getProduct()->getName(),
+                'description' => $item->getProduct()->getDescription() ?? '',
+                'quantity'    => $item->getQuantity(),
+                'unitPrice'   => $item->getProduct()->getPrice(),
+            ];
+        }
     }
 
     public function getClients(): array
@@ -87,20 +113,27 @@ class InvoiceFormComponent extends AbstractController
     }
 
     #[LiveAction]
-    public function save(string $action = 'draft'): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function save(string $action = 'draft'): RedirectResponse
     {
         if (!$this->clientId || empty($this->lines)) {
             return $this->redirectToRoute('app_invoice_new');
         }
 
-        $invoice = new Invoice();
-        $invoice->setUser($this->security->getUser());
-        $invoice->setNumber($this->invoiceRepository->generateNextNumber());
-        $invoice->setStatus($action === 'validate' ? Status::PENDING_PAYMENT : Status::DRAFT);
-        $invoice->setCreatedAt(new \DateTimeImmutable($this->date));
+        if ($this->invoiceId) {
+            $invoice = $this->invoiceRepository->find($this->invoiceId);
+            foreach ($invoice->getItems() as $item) {
+                $invoice->removeItem($item);
+                $this->em->remove($item);
+            }
+        } else {
+            $invoice = new Invoice();
+            $invoice->setUser($this->security->getUser());
+            $invoice->setNumber($this->invoiceRepository->generateNextNumber());
+            $invoice->setCreatedAt(new \DateTimeImmutable($this->date));
+        }
 
-        $client = $this->clientRepository->find($this->clientId);
-        $invoice->setClient($client);
+        $invoice->setStatus($action === 'validate' ? Status::PENDING_PAYMENT : Status::DRAFT);
+        $invoice->setClient($this->clientRepository->find($this->clientId));
 
         foreach ($this->lines as $lineData) {
             $product = $this->productRepository->find($lineData['productId']);
