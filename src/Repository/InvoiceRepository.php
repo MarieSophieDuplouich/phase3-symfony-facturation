@@ -3,12 +3,11 @@
 namespace App\Repository;
 
 use App\Entity\Invoice;
+use App\Entity\User;
+use App\Enum\Status;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @extends ServiceEntityRepository<Invoice>
- */
 class InvoiceRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -16,28 +15,24 @@ class InvoiceRepository extends ServiceEntityRepository
         parent::__construct($registry, Invoice::class);
     }
 
-    //    /**
-    //     * @return Invoice[] Returns an array of Invoice objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('i')
-    //            ->andWhere('i.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('i.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function generateNextNumber(): string
+    {
+        $now        = new \DateTime();
+        $year       = $now->format('Y');
+        $month      = $now->format('m');
+        $day        = $now->format('d');
+        $startMonth = new \DateTimeImmutable($year . '-' . $month . '-01 00:00:00');
+        $endMonth   = $startMonth->modify('last day of this month')->setTime(23, 59, 59);
 
-    //    public function findOneBySomeField($value): ?Invoice
-    //    {
-    //        return $this->createQueryBuilder('i')
-    //            ->andWhere('i.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        $count = $this->createQueryBuilder('i')
+            ->select('COUNT(i.id)')
+            ->where('i.createdAt >= :start')
+            ->andWhere('i.createdAt <= :end')
+            ->setParameter('start', $startMonth)
+            ->setParameter('end', $endMonth)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return sprintf('FACT-%s%s%s-%d', $year, $month, $day, (int) $count + 1);
+    }
 }
