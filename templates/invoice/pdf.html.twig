@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 13px; color: #1a1a1a; padding: 40px; }
+
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+        .company-name { font-size: 20px; font-weight: bold; color: #155DFC; }
+        .company-info { font-size: 12px; color: #555; margin-top: 4px; }
+        .invoice-label { text-align: right; }
+        .invoice-label h1 { font-size: 28px; font-weight: bold; letter-spacing: 2px; color: #1a1a1a; }
+        .invoice-label p { font-size: 12px; color: #555; margin-top: 4px; }
+
+        .billing { display: flex; justify-content: flex-end; margin-bottom: 40px; }
+        .billing-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px 20px; min-width: 260px; }
+        .billing-box .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 8px; }
+        .billing-box .client-name { font-size: 15px; font-weight: bold; margin-bottom: 6px; }
+        .billing-box p { font-size: 12px; color: #555; margin-top: 3px; }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        thead tr { border-bottom: 2px solid #1a1a1a; }
+        th { text-align: left; padding: 10px 8px; font-size: 12px; font-weight: bold; }
+        th:not(:first-child) { text-align: right; }
+        tbody tr { border-bottom: 1px solid #f0f0f0; }
+        td { padding: 12px 8px; font-size: 13px; }
+        td:not(:first-child) { text-align: right; }
+        .product-name { font-weight: 600; }
+        .product-desc { font-size: 11px; color: #888; margin-top: 2px; }
+
+        .totals { display: flex; justify-content: flex-end; margin-bottom: 40px; }
+        .totals-box { min-width: 280px; }
+        .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #555; }
+        .totals-row.total { border-top: 2px solid #1a1a1a; margin-top: 8px; padding-top: 10px; font-size: 16px; font-weight: bold; color: #1a1a1a; }
+        .totals-row.tva-note { font-size: 10px; color: #aaa; justify-content: flex-end; }
+
+        .footer { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px; }
+        .footer h3 { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: #333; }
+        .footer p { font-size: 11px; color: #666; margin-top: 4px; line-height: 1.6; }
+        .iban-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 14px; margin-top: 10px; }
+        .iban-box p { font-size: 12px; color: #333; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+    {# Header : émetteur + titre #}
+    <div class="header">
+        <div>
+            <div class="company-name">{{ invoice.user.companyName }}</div>
+            <div class="company-info">
+                {{ invoice.user.firstName }} {{ invoice.user.lastName }}<br>
+                {{ invoice.user.email }}<br>
+                {% if invoice.user.siret %}SIRET : {{ invoice.user.siret }}{% endif %}
+            </div>
+        </div>
+        <div class="invoice-label">
+            <h1>FACTURE</h1>
+            <p>N° {{ invoice.number }}</p>
+            <p>Date : {{ invoice.createdAt|date('d/m/Y') }}</p>
+        </div>
+    </div>
+
+    {# Facturation client #}
+    <div class="billing">
+        <div class="billing-box">
+            <div class="label">Facturé à</div>
+            <div class="client-name">{{ invoice.client.name }}</div>
+            {% if invoice.client.address %}<p>{{ invoice.client.address }}</p>{% endif %}
+            {% if invoice.client.email %}<p>{{ invoice.client.email }}</p>{% endif %}
+            {% if invoice.client.siret %}<p>SIRET : {{ invoice.client.siret }}</p>{% endif %}
+        </div>
+    </div>
+
+    {# Lignes de facture #}
+    <table>
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Qté</th>
+                <th>Prix Unitaire</th>
+                <th>Total TTC</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.items %}
+            <tr>
+                <td>
+                    <div class="product-name">{{ item.product.name }}</div>
+                    {% if item.product.description %}
+                        <div class="product-desc">{{ item.product.description }}</div>
+                    {% endif %}
+                </td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.product.price|number_format(2, ',', ' ') }} €</td>
+                <td>{{ (item.quantity * item.product.price)|number_format(2, ',', ' ') }} €</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {# Totaux #}
+    <div class="totals">
+        <div class="totals-box">
+            <div class="totals-row">
+                <span>Total HT</span>
+                <span>{{ invoice.totalTtc|number_format(2, ',', ' ') }} €</span>
+            </div>
+            <div class="totals-row total">
+                <span>Total TTC</span>
+                <span>{{ invoice.totalTtc|number_format(2, ',', ' ') }} €</span>
+            </div>
+            <div class="totals-row tva-note">
+                <span>TVA non applicable, art. 293 B du CGI</span>
+            </div>
+        </div>
+    </div>
+
+    {# Footer CGV + IBAN #}
+    <div class="footer">
+        <h3>Conditions de paiement</h3>
+        <p>Paiement à réception de facture. Tout retard de paiement entraîne des pénalités au taux légal en vigueur.</p>
+        <p>En cas de litige, les tribunaux compétents sont ceux du siège social de {{ invoice.user.companyName }}.</p>
+
+        {% if invoice.user.iban %}
+        <div class="iban-box">
+            <p>Coordonnées bancaires pour le paiement :</p>
+            <p>{{ invoice.user.iban }}</p>
+        </div>
+        {% endif %}
+
+        {% if invoice.user.siret %}
+        <p style="margin-top: 12px; font-size: 11px; color: #aaa;">
+            SIRET : {{ invoice.user.siret }}
+        </p>
+        {% endif %}
+    </div>
+
+</body>
+</html>
