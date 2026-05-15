@@ -10,26 +10,32 @@
 
     <main class="flex-1 p-8 flex flex-col items-center gap-10">
 
-        {# HEADER #}
-        <div class="w-full max-w-5xl flex justify-between items-center">
+        <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 2V42L6 40L10 42L14 40L18 42L22 40L26 42L30 40L34 42V2L30 4L26 2L22 4L18 2L14 4L10 2L6 4L2 2Z"
+                stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path
+                d="M26 14H14C12.9391 14 11.9217 14.4214 11.1716 15.1716C10.4214 15.9217 10 16.9391 10 18C10 19.0609 10.4214 20.0783 11.1716 20.8284C11.9217 21.5786 12.9391 22 14 22H22C23.0609 22 24.0783 22.4214 24.8284 23.1716C25.5786 23.9217 26 24.9391 26 26C26 27.0609 25.5786 28.0783 24.8284 28.8284C24.0783 29.5786 23.0609 30 22 30H10"
+                stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M18 33V11" stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+
+        <div class="flex flex-row justify-center w-full max-w-5xl  items-center">
+
             <h1 class="text-2xl font-semibold text-gray-900">
                 Créer un client
             </h1>
 
-            <a href="{{ path('app_client_index') }}" class="text-sm text-gray-600 hover:text-gray-900">
-                ← Retour
-            </a>
         </div>
 
-        {# FORMULAIRE EN HAUT #}
-        <div class="bg-white rounded-lg shadow p-6 w-full max-w-2xl">
+
+        <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
             {{ include('client/_form.html.twig') }}
         </div>
 
-        {# TABLEAU EN DESSOUS #}
+
         <div class="w-full max-w-5xl">
 
-            <h2 class="text-lg font-semibold mb-4">
+            <h2 class="text-centertext-2xl font-semibold mb-4">
                 Clients existants
             </h2>
 

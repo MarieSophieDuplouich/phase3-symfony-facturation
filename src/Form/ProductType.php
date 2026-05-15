@@ -3,9 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Product;
-use App\Entity\User;
 use App\Enum\Unit;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
@@ -23,15 +21,13 @@ class ProductType extends AbstractType
                 'currency' => 'EUR',
                 'required' => true,
             ])
+
             ->add('unit', EnumType::class, [
                 'class' => Unit::class,
                 'label' => 'Unité',
-            ])
-            ->add('user', EntityType::class, [
-                'class' => User::class,
-                'choice_label' => 'id',
             ]);
-    }
+
+    } 
 
     public function configureOptions(OptionsResolver $resolver): void
     {

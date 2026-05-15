@@ -1,8 +1,9 @@
 <?php
-
 namespace App\Entity;
 
 use App\Repository\ClientRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
@@ -35,92 +36,41 @@ class Client
     #[ORM\JoinColumn(nullable: false)]
     private ?User $user = null;
 
-    public function getId(): ?int
+    #[ORM\OneToMany(mappedBy: 'client', targetEntity: Invoice::class)]
+    private Collection $invoices;
+
+    #[ORM\OneToMany(mappedBy: 'client', targetEntity: Product::class)]
+    private Collection $products;
+
+    public function __construct()
     {
-        return $this->id;
+        $this->invoices = new ArrayCollection();
+        $this->products = new ArrayCollection();
     }
 
-    public function getName(): ?string
-    {
-        return $this->name;
-    }
+    public function getId(): ?int { return $this->id; }
 
-    public function setName(string $name): static
-    {
-        $this->name = $name;
+    public function getName(): ?string { return $this->name; }
+    public function setName(string $name): static { $this->name = $name; return $this; }
 
-        return $this;
-    }
+    public function getEmail(): ?string { return $this->email; }
+    public function setEmail(string $email): static { $this->email = $email; return $this; }
 
-    public function getEmail(): ?string
-    {
-        return $this->email;
-    }
+    public function getPhone(): ?string { return $this->phone; }
+    public function setPhone(?string $phone): static { $this->phone = $phone; return $this; }
 
-    public function setEmail(string $email): static
-    {
-        $this->email = $email;
+    public function getAddress(): ?string { return $this->address; }
+    public function setAddress(?string $address): static { $this->address = $address; return $this; }
 
-        return $this;
-    }
+    public function getSiret(): ?string { return $this->siret; }
+    public function setSiret(?string $siret): static { $this->siret = $siret; return $this; }
 
-    public function getPhone(): ?string
-    {
-        return $this->phone;
-    }
+    public function getRib(): ?string { return $this->rib; }
+    public function setRib(?string $rib): static { $this->rib = $rib; return $this; }
 
-    public function setPhone(?string $phone): static
-    {
-        $this->phone = $phone;
+    public function getUser(): ?User { return $this->user; }
+    public function setUser(?User $user): static { $this->user = $user; return $this; }
 
-        return $this;
-    }
-
-    public function getAddress(): ?string
-    {
-        return $this->address;
-    }
-
-    public function setAddress(?string $address): static
-    {
-        $this->address = $address;
-
-        return $this;
-    }
-
-    public function getSiret(): ?string
-    {
-        return $this->siret;
-    }
-
-    public function setSiret(?string $siret): static
-    {
-        $this->siret = $siret;
-
-        return $this;
-    }
-
-    public function getRib(): ?string
-    {
-        return $this->rib;
-    }
-
-    public function setRib(?string $rib): static
-    {
-        $this->rib = $rib;
-
-        return $this;
-    }
-
-    public function getUser(): ?User
-    {
-        return $this->user;
-    }
-
-    public function setUser(?User $user): static
-    {
-        $this->user = $user;
-
-        return $this;
-    }
+    public function getInvoices(): Collection { return $this->invoices; }
+    public function getProducts(): Collection { return $this->products; }
 }
