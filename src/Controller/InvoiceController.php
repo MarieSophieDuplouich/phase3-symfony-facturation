@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Entity\Invoice;
 use App\Enum\Status;
-use App\Form\InvoiceType;
 use App\Repository\InvoiceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
