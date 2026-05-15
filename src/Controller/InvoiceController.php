@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Controller;
-
 use App\Entity\Invoice;
 use App\Enum\Status;
 use App\Repository\InvoiceRepository;
@@ -116,4 +115,7 @@ final class InvoiceController extends AbstractController
 
         return $this->redirectToRoute('app_invoice_index', [], Response::HTTP_SEE_OTHER);
     }
+
+ 
 }
+
