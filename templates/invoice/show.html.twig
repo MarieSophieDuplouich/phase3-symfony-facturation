@@ -10,6 +10,10 @@
             <tr>
                 <th>Id</th>
                 <td>{{ invoice.id }}</td>
+                <td>{{ invoice.client ? invoice.client.name : '' }}</td>
+                <td>{{ invoice.status.value }}</td>
+                <td>{{ invoice.createdAt ? invoice.createdAt|date('Y-m-d H:i:s') : '' }}</td>
+                <td>{{ invoice.totalTtc }}</td>
             </tr>
         </tbody>
     </table>
