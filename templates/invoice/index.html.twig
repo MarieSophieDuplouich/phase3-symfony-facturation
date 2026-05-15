@@ -185,7 +185,7 @@
                                 {% if invoice.status == 'draft' %}
                                 <form method="post" action="{{ path('app_invoice_delete', {id: invoice.id}) }}"
                                     onsubmit="return confirm('Supprimer ce brouillon ?')">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_' ~ invoice.id) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ invoice.id) }}">
                                     <button type="submit"
                                         class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                         <svg width="15" height="17" viewBox="0 0 15 17" fill="none"
