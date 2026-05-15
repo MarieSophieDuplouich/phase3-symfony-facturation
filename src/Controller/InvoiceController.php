@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Controller;
+
 use App\Entity\Invoice;
 use App\Enum\Status;
 use App\Repository\InvoiceRepository;
@@ -9,6 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Sensiolabs\GotenbergBundle\GotenbergPdfInterface;
 
 #[Route('/invoice')]
 final class InvoiceController extends AbstractController
@@ -116,6 +118,23 @@ final class InvoiceController extends AbstractController
         return $this->redirectToRoute('app_invoice_index', [], Response::HTTP_SEE_OTHER);
     }
 
- 
-}
 
+    #[Route('/{id}/pdf', name: 'app_invoice_pdf', methods: ['GET'])]
+    public function pdf(Invoice $invoice, GotenbergPdfInterface $gotenberg): Response
+    {
+        if ($invoice->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if (!$invoice->isPending() && !$invoice->isPaid()) {
+            $this->addFlash('error', 'Seules les factures validées peuvent être exportées en PDF.');
+            return $this->redirectToRoute('app_invoice_show', ['id' => $invoice->getId()]);
+        }
+
+        return $gotenberg->html()
+            ->content('invoice/pdf.html.twig', ['invoice' => $invoice])
+            ->filename('facture-' . $invoice->getNumber())
+            ->generate()
+            ->stream();
+    }
+}
