@@ -30,7 +30,7 @@ cd /home/user/Bureau/phase3-symfony-facturation
 ```
 
 
-# lancer le projet
+# lancer le projet améliorer les bash
 ```bash  
 symfony server:start
 symfony console tailwind:build --watch
