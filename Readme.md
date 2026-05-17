@@ -1,26 +1,44 @@
 # Rédigez un Readme qui explique comment lancer l'application à partir d'un serveur ou d'un PC neuf
--  Cloner le projet avec la commande suivante :
+## Résumé
+
+Pour lancer l'application à partir d'un serveur ou d'un PC neuf, il faut effectuer les étapes suivantes :
+
+## Clonez le projet
 
 ```bash
 git clone https://github.com/CHAOUCHI/phase3-symfony-facturation.git
 ```
 
+## Placez-vous dans le bon projet en ligne de commande
 ```bash 
 cd /home/user/Bureau/phase3-symfony-facturation
 ```
 
-  - ouvrir le projet via Visual Studio Code avec la commande suivante :
+## Ouvrez le projet via Visual Studio Code avec la commande suivante :
     ```bash
     code .
- -  ```bash
-    composer -v
     ```
+ 
+ ## Faites cette ligne de commande pour savoir si composer est installé et connaître sa version associée
+ 
+ ```bash
+    composer -v
+   ```
+
+
+## Faites cette ligne de commande pour savoir si composer est installé ( et connaître sa version associée)
+ 
 ```bash   
   composer install
   composer -v affiche Composer version 2.9.5 2026-01-29 11:40:53
   composer -v
   composer install
   composer -v affiche Composer version 2.9.5 2026-01-29 11:40:53
+  ```
+
+## Vérifiez les prérequis
+
+```bash
   php -v
   symfony check:requirements                
   symfony -V affiche (Symfony CLI version 5.15.1 (c) 2021-2026 Fabien Potencier (2025-10-04T08:05:57Z - stable))
@@ -30,17 +48,24 @@ cd /home/user/Bureau/phase3-symfony-facturation
 ```
 
 
-# lancer le projet améliorer les bash
+## Lancez le projet
 ```bash  
 symfony server:start
 symfony console tailwind:build --watch
 symfony console clear:cache ci-besoin
 travailler sur le projet
+```
+
+
+## Stoppez le projet
+```bash
 symfony server:stop
 ```
-# pour mysqlite
 
-- ouvrir un terminal à part
+
+## Base de données MySqlite
+
+### Ouvrez un terminal à part
 ```bash
 cd  /home/user/Bureau/phase3-symfony-facturation
 cd var/data_dev.db
