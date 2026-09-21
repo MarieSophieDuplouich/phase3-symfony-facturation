@@ -1,0 +1,120 @@
+{# TODO (propriétaire du site) : ce contenu est un gabarit générique conforme aux grandes
+   lignes du RGPD pour un SaaS de facturation. Faites-le relire par un juriste ou un DPO
+   avant mise en production, et complétez les variables globales dans
+   config/packages/twig.yaml (company_legal_name, company_siret, hosting_provider_name...). #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Politique de confidentialité{% endblock %}
+{% block meta_description %}Politique de confidentialité de {{ app_name }} : quelles données nous collectons, pourquoi, et comment exercer vos droits RGPD.{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[#F9FAFB] font-sans">
+    {% include 'components/PublicHeader.html.twig' %}
+
+    <main class="max-w-3xl mx-auto px-4 py-12">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Politique de confidentialité</h1>
+        <p class="text-sm text-gray-500 mb-10">Dernière mise à jour : {{ "now"|date("d/m/Y") }}</p>
+
+        <div class="flex flex-col gap-8 text-gray-700 leading-relaxed">
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">1. Qui sommes-nous ?</h2>
+                <p>
+                    {{ app_name }} est édité par {{ company_legal_name }} ({{ company_legal_form }}),
+                    immatriculée sous le numéro SIRET {{ company_siret }}, dont le siège social est
+                    situé {{ company_address }}. Vous pouvez nous contacter à l'adresse
+                    <a href="mailto:{{ company_email }}" class="text-blue-700 underline">{{ company_email }}</a>.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">2. Quelles données collectons-nous ?</h2>
+                <ul class="list-disc list-inside flex flex-col gap-1">
+                    <li>Données de compte : nom, prénom, adresse e-mail, mot de passe (chiffré), raison sociale.</li>
+                    <li>Données de facturation : informations sur vos clients, produits, devis et factures que vous saisissez dans l'application.</li>
+                    <li>Données techniques : adresse IP, journaux de connexion, cookies (voir section 6).</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">3. Pourquoi collectons-nous ces données ?</h2>
+                <ul class="list-disc list-inside flex flex-col gap-1">
+                    <li>Fournir le service de facturation (création de compte, génération de factures et devis).</li>
+                    <li>Assurer la sécurité du service (prévention de la fraude, journalisation des accès).</li>
+                    <li>Vous contacter pour des raisons contractuelles ou d'assistance.</li>
+                    <li>Mesurer l'audience du site, uniquement si vous y avez consenti (voir bandeau cookies).</li>
+                </ul>
+                <p class="mt-2">
+                    La base légale de ces traitements est l'exécution du contrat qui nous lie
+                    (utilisation du service) et, pour la mesure d'audience, votre consentement.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">4. Combien de temps conservons-nous vos données ?</h2>
+                <p>
+                    Vos données de compte et de facturation sont conservées pendant toute la durée
+                    de votre utilisation du service, puis archivées conformément aux obligations
+                    légales de conservation des documents comptables (10 ans pour les factures en droit
+                    français), avant suppression définitive.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">5. Qui a accès à vos données ?</h2>
+                <p>
+                    Vos données sont hébergées chez {{ hosting_provider_name }} ({{ hosting_provider_address }}).
+                    Elles ne sont ni vendues, ni louées, ni transmises à des tiers à des fins commerciales.
+                    Elles peuvent être communiquées à nos sous-traitants techniques (hébergement, envoi
+                    d'e-mails) dans la stricte mesure nécessaire au fonctionnement du service, ou aux
+                    autorités compétentes si la loi l'exige.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">6. Cookies</h2>
+                <p>
+                    Nous utilisons un cookie strictement nécessaire au fonctionnement du service
+                    (session de connexion, protection CSRF), qui ne nécessite pas votre consentement.
+                    Avec votre accord, nous pouvons également déposer des cookies de mesure d'audience
+                    pour comprendre l'usage du site. Vous pouvez modifier votre choix à tout moment via
+                    le bandeau affiché lors de votre première visite, ou en effaçant les cookies de
+                    votre navigateur.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">7. Vos droits</h2>
+                <p>
+                    Conformément au Règlement Général sur la Protection des Données (RGPD), vous
+                    disposez d'un droit d'accès, de rectification, d'effacement, de limitation, de
+                    portabilité et d'opposition sur vos données personnelles. Vous pouvez exercer ces
+                    droits en écrivant à <a href="mailto:{{ dpo_contact }}" class="text-blue-700 underline">{{ dpo_contact }}</a>.
+                    Vous disposez également du droit d'introduire une réclamation auprès de la CNIL
+                    (<a href="https://www.cnil.fr" class="text-blue-700 underline" target="_blank" rel="noopener">www.cnil.fr</a>).
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">8. Sécurité</h2>
+                <p>
+                    Nous mettons en œuvre des mesures techniques et organisationnelles raisonnables
+                    (chiffrement des mots de passe, connexion HTTPS, contrôle d'accès par compte) pour
+                    protéger vos données contre l'accès, la modification ou la destruction non autorisés.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">9. Modifications</h2>
+                <p>
+                    Cette politique peut être mise à jour. La date de dernière modification figure en
+                    haut de cette page. Nous vous invitons à la consulter régulièrement.
+                </p>
+            </section>
+        </div>
+
+        <a href="{{ path('app_login') }}" class="inline-block mt-10 text-sm text-blue-700 underline">
+            &larr; Retour
+        </a>
+    </main>
+</div>
+{% endblock %}

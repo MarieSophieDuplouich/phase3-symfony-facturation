@@ -1,6 +1,37 @@
-<div{{ attributes }}>
-    <aside class="w-56 min-h-screen bg-white flex flex-col py-4 px-3 gap-1 shrink-0 border-r border-gray-200">
-        <svg width="151" height="28" viewBox="0 0 151 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<div{{ attributes }} data-controller="sidebar">
+    {# Barre mobile : visible uniquement sous md, ouvre le menu en tiroir. #}
+    <div class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 sticky top-0 z-30">
+        <a href="{{ path('app_dashboard') }}" class="flex items-center gap-2 font-bold text-blue-700">
+            <span class="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center text-xs">F</span>
+            {{ app_name }}
+        </a>
+        <button type="button" data-action="sidebar#toggle" data-sidebar-target="button"
+                aria-label="Ouvrir le menu" aria-expanded="false"
+                class="p-2 rounded-lg text-gray-600 hover:bg-gray-100">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"
+                 xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+            </svg>
+        </button>
+    </div>
+
+    {# Fond assombri mobile : ferme le menu au clic en dehors. #}
+    <div data-sidebar-target="backdrop" data-action="click->sidebar#close"
+         class="hidden fixed inset-0 bg-black/40 z-40 md:hidden"></div>
+
+    <aside data-sidebar-target="panel"
+        class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full transition-transform duration-200 ease-in-out
+               md:static md:translate-x-0 md:w-56 md:z-auto
+               min-h-screen bg-white flex flex-col py-4 px-3 gap-1 shrink-0 border-r border-gray-200 overflow-y-auto">
+        <button type="button" data-action="sidebar#close" aria-label="Fermer le menu"
+                class="md:hidden self-end p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 mb-1">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 5L5 15" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 5L15 15" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+
+        <svg width="151" height="28" viewBox="0 0 151 28" fill="none" xmlns="http://www.w3.org/2000/svg" class="hidden md:block">
             <path
                 d="M4.66663 2.33325V25.6666L6.99996 24.4999L9.33329 25.6666L11.6666 24.4999L14 25.6666L16.3333 24.4999L18.6666 25.6666L21 24.4999L23.3333 25.6666V2.33325L21 3.49992L18.6666 2.33325L16.3333 3.49992L14 2.33325L11.6666 3.49992L9.33329 2.33325L6.99996 3.49992L4.66663 2.33325Z"
                 stroke="#155DFC" stroke-width="2.33333" stroke-linecap="round" stroke-linejoin="round" />
@@ -109,7 +140,7 @@
                     <span class="text-sm font-medium text-gray-800 truncate">
                         {{ app.user ? app.user.companyName : 'Raison sociale' }}
                     </span>
-                    <span class="text-xs text-gray-400 truncate">
+                    <span class="text-xs text-gray-500 truncate">
                         {{ app.user ? app.user.userIdentifier : 'email@exemple.fr' }}
                     </span>
                 </div>
@@ -127,6 +158,12 @@
                 </svg>
                 Déconnexion
             </a>
+
+            <div class="flex items-center gap-2 px-3 text-xs text-gray-500">
+                <a href="{{ path('app_terms') }}" class="hover:text-gray-600">CGU</a>
+                <span>·</span>
+                <a href="{{ path('app_privacy') }}" class="hover:text-gray-600">Confidentialité</a>
+            </div>
         </div>
     </aside>
 

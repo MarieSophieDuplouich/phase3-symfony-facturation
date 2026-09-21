@@ -82,7 +82,7 @@
     {# Valider facture uniquement si brouillon #}
     {% if invoice.isDraft() %}
     <form method="post" action="{{ path('app_invoice_validate', {id: invoice.id}) }}">
-
+        <input type="hidden" name="_token" value="{{ csrf_token('validate' ~ invoice.id) }}">
         <button class="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm">
             Valider la facture
         </button>
@@ -93,7 +93,7 @@
     {% if invoice.isPending() %}
     <form method="post" action="{{ path('app_invoice_paid', {id: invoice.id}) }}"
         onsubmit="return confirm('Confirmer le paiement de cette facture ?');">
-
+        <input type="hidden" name="_token" value="{{ csrf_token('paid' ~ invoice.id) }}">
         <button class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm">
             Valider le paiement
         </button>

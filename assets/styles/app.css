@@ -33,3 +33,13 @@ button:hover{
     color: white;
 }
 
+/* Honeypot anti-spam : caché visuellement (hors écran) plutôt qu'en
+   display:none/visibility:hidden, que certains bots savent détecter. */
+.hp-field {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+

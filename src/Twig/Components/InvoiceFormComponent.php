@@ -39,6 +39,10 @@ class InvoiceFormComponent extends AbstractController
     #[LiveProp(writable: true)]
     public array $lines = [];
 
+    /** Message affiché dans le formulaire si la sauvegarde est refusée. */
+    #[LiveProp]
+    public ?string $error = null;
+
     public function __construct(
         private ProductRepository $productRepository,
         private ClientRepository $clientRepository,
@@ -113,10 +117,18 @@ class InvoiceFormComponent extends AbstractController
     }
 
     #[LiveAction]
-    public function save(string $action = 'draft'): RedirectResponse
+    public function save(string $action = 'draft'): ?RedirectResponse
     {
-        if (!$this->clientId || empty($this->lines)) {
-            return $this->redirectToRoute('app_invoice_new');
+        $this->error = null;
+
+        if (!$this->clientId) {
+            $this->error = 'Veuillez sélectionner un client avant d\'enregistrer.';
+            return null;
+        }
+
+        if (empty($this->lines)) {
+            $this->error = 'Veuillez ajouter au moins une ligne à la facture avant d\'enregistrer.';
+            return null;
         }
 
         if ($this->invoiceId) {

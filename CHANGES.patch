@@ -1,0 +1,2483 @@
+diff --git a/.env b/.env
+index 3e47aab..f2fd24c 100644
+--- a/.env
++++ b/.env
+@@ -51,3 +51,10 @@ MAILER_DSN=smtp://mailer:1025
+ GOTENBERG_DSN=http://gotenberg:3000
+ ###< sensiolabs/gotenberg-bundle ###
+ 
++###> analytics ###
++# Laisser vide pour désactiver l'analytics. Renseignez votre ID de mesure
++# Google Analytics 4 (format G-XXXXXXXXXX) pour l'activer. Le script ne se
++# charge que si l'utilisateur a accepté les cookies via le bandeau.
++GA_MEASUREMENT_ID=
++###< analytics ###
++
+diff --git a/assets/controllers/cookie_consent_controller.js b/assets/controllers/cookie_consent_controller.js
+new file mode 100644
+index 0000000..229d1e6
+--- /dev/null
++++ b/assets/controllers/cookie_consent_controller.js
+@@ -0,0 +1,61 @@
++import { Controller } from '@hotwired/stimulus';
++
++/**
++ * Bandeau de consentement aux cookies (RGPD).
++ *
++ * - Rien n'est chargé tant que l'utilisateur n'a pas fait de choix.
++ * - Le choix est mémorisé dans le localStorage du navigateur (pas de cookie
++ *   nécessaire pour retenir le consentement lui-même).
++ * - Un évènement DOM `cookie-consent:changed` est émis à chaque changement,
++ *   avec `detail.analytics` (true/false), pour que d'autres scripts
++ *   (ex: analytics) puissent réagir sans être couplés à ce contrôleur.
++ */
++export default class extends Controller {
++    static targets = ['banner'];
++
++    static STORAGE_KEY = 'cookie_consent';
++
++    connect() {
++        const consent = this.readConsent();
++
++        if (consent === null) {
++            this.bannerTarget.classList.remove('hidden');
++        } else {
++            this.dispatchConsent(consent === 'accepted');
++        }
++    }
++
++    acceptAll() {
++        this.saveConsent('accepted');
++    }
++
++    rejectNonEssential() {
++        this.saveConsent('rejected');
++    }
++
++    saveConsent(value) {
++        try {
++            window.localStorage.setItem(this.constructor.STORAGE_KEY, value);
++        } catch (e) {
++            // Stockage indisponible (navigation privée stricte, etc.) : on
++            // n'interrompt pas le parcours de l'utilisateur pour autant.
++        }
++
++        this.bannerTarget.classList.add('hidden');
++        this.dispatchConsent(value === 'accepted');
++    }
++
++    readConsent() {
++        try {
++            return window.localStorage.getItem(this.constructor.STORAGE_KEY);
++        } catch (e) {
++            return null;
++        }
++    }
++
++    dispatchConsent(analyticsAllowed) {
++        window.dispatchEvent(new CustomEvent('cookie-consent:changed', {
++            detail: { analytics: analyticsAllowed },
++        }));
++    }
++}
+diff --git a/assets/controllers/sidebar_controller.js b/assets/controllers/sidebar_controller.js
+new file mode 100644
+index 0000000..26e3042
+--- /dev/null
++++ b/assets/controllers/sidebar_controller.js
+@@ -0,0 +1,46 @@
++import { Controller } from '@hotwired/stimulus';
++
++/**
++ * Menu latéral responsive : masqué hors écran sur mobile, ouvert via le
++ * bouton hamburger, avec un fond assombri cliquable pour le refermer.
++ * Sur desktop (md:+), le CSS garde le menu toujours visible et ce
++ * contrôleur n'a aucun effet.
++ */
++export default class extends Controller {
++    static targets = ['panel', 'backdrop', 'button'];
++
++    connect() {
++        this.onPanelClick = (event) => {
++            if (event.target.closest('a')) {
++                this.close();
++            }
++        };
++        this.panelTarget.addEventListener('click', this.onPanelClick);
++    }
++
++    disconnect() {
++        this.panelTarget.removeEventListener('click', this.onPanelClick);
++    }
++
++    open() {
++        this.panelTarget.classList.remove('-translate-x-full');
++        this.backdropTarget.classList.remove('hidden');
++        this.buttonTarget.setAttribute('aria-expanded', 'true');
++        document.body.classList.add('overflow-hidden');
++    }
++
++    close() {
++        this.panelTarget.classList.add('-translate-x-full');
++        this.backdropTarget.classList.add('hidden');
++        this.buttonTarget.setAttribute('aria-expanded', 'false');
++        document.body.classList.remove('overflow-hidden');
++    }
++
++    toggle() {
++        if (this.panelTarget.classList.contains('-translate-x-full')) {
++            this.open();
++        } else {
++            this.close();
++        }
++    }
++}
+diff --git a/assets/styles/app.css b/assets/styles/app.css
+index bac9564..72512c5 100644
+--- a/assets/styles/app.css
++++ b/assets/styles/app.css
+@@ -33,3 +33,13 @@ button:hover{
+     color: white;
+ }
+ 
++/* Honeypot anti-spam : caché visuellement (hors écran) plutôt qu'en
++   display:none/visibility:hidden, que certains bots savent détecter. */
++.hp-field {
++    position: absolute;
++    left: -9999px;
++    width: 1px;
++    height: 1px;
++    overflow: hidden;
++}
++
+diff --git a/config/packages/framework.yaml b/config/packages/framework.yaml
+index 9833e8a..f97301f 100644
+--- a/config/packages/framework.yaml
++++ b/config/packages/framework.yaml
+@@ -2,8 +2,18 @@ framework:
+     secret: '%env(APP_SECRET)%'
+     session:
+         cookie_lifetime: 3600
++        cookie_secure: auto
++        cookie_samesite: lax
+         # gc_maxlifetime: 3600
+ 
++    # Si l'application tourne derrière un reverse proxy / load balancer qui
++    # termine le TLS à votre place (Nginx, Cloudflare, un LB cloud...),
++    # décommentez ces deux lignes pour que Symfony sache reconnaître le HTTPS
++    # d'origine (sinon $request->isSecure() renvoie toujours false, casse la
++    # redirection HTTPS forcée et le flag "secure" des cookies).
++    # trusted_proxies: '%env(TRUSTED_PROXIES)%'
++    # trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port']
++
+ 
+ when@test:
+     framework:
+diff --git a/config/packages/security.yaml b/config/packages/security.yaml
+index 0c4542b..5cbda9c 100644
+--- a/config/packages/security.yaml
++++ b/config/packages/security.yaml
+@@ -37,8 +37,12 @@ security:
+     # Note: Only the *first* matching rule is applied
+     access_control:
+           - { path: ^/admin, roles: ROLE_ADMIN }
+-          - { path: ^/profile, roles: ROLE_USER } 
+-          - {path: ^/dashboard, roles: ROLE_USER }
++          - { path: ^/profile, roles: ROLE_USER }
++          - { path: ^/dashboard, roles: ROLE_USER }
++          - { path: ^/client, roles: ROLE_USER }
++          - { path: ^/invoice, roles: ROLE_USER }
++          - { path: ^/product, roles: ROLE_USER }
++          - { path: ^/mail, roles: ROLE_USER }
+ 
+ when@test:
+     security:
+diff --git a/config/packages/twig.yaml b/config/packages/twig.yaml
+index 3f795d9..bca5648 100644
+--- a/config/packages/twig.yaml
++++ b/config/packages/twig.yaml
+@@ -1,5 +1,26 @@
+ twig:
+     file_name_pattern: '*.twig'
++    globals:
++        # TODO: à personnaliser une fois pour toutes avec votre vraie marque.
++        app_name: 'FacturSaas'
++        app_description: 'FacturSaas, le logiciel de facturation simple pour indépendants et petites entreprises : devis, factures et suivi client en un seul endroit.'
++        app_theme_color: '#1D4ED8'
++
++        # TODO: informations légales réelles à renseigner avant mise en production
++        # (nécessaires pour les CGU et la politique de confidentialité).
++        company_legal_name: '[Raison sociale à compléter]'
++        company_legal_form: '[Forme juridique, ex. SASU]'
++        company_siret: '[Numéro SIRET à compléter]'
++        company_address: '[Adresse du siège social à compléter]'
++        company_email: 'contact@facturly.example'
++        company_publication_director: '[Nom du directeur de la publication]'
++        hosting_provider_name: '[Nom de l’hébergeur, ex. OVHcloud / Scaleway]'
++        hosting_provider_address: '[Adresse de l’hébergeur]'
++        dpo_contact: 'dpo@facturly.example'
++
++        # Vide par défaut : l'analytics reste désactivé tant que la variable
++        # d'environnement GA_MEASUREMENT_ID n'est pas renseignée.
++        ga_measurement_id: '%env(GA_MEASUREMENT_ID)%'
+ 
+ when@test:
+     twig:
+diff --git a/config/services.yaml b/config/services.yaml
+index 5cd70c2..1789786 100644
+--- a/config/services.yaml
++++ b/config/services.yaml
+@@ -13,6 +13,8 @@ services:
+     _defaults:
+         autowire: true      # Automatically injects dependencies in your services.
+         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
++        bind:
++            string $environment: '%kernel.environment%'
+ 
+     # makes classes in src/ available to be used as services
+     # this creates a service per class whose id is the fully-qualified class name
+diff --git a/migrations/Version20260919120000.php b/migrations/Version20260919120000.php
+new file mode 100644
+index 0000000..f794f3b
+--- /dev/null
++++ b/migrations/Version20260919120000.php
+@@ -0,0 +1,33 @@
++<?php
++
++declare(strict_types=1);
++
++namespace DoctrineMigrations;
++
++use Doctrine\DBAL\Schema\Schema;
++use Doctrine\Migrations\AbstractMigration;
++
++/**
++ * Ajoute une contrainte d'unicité sur l'email des utilisateurs.
++ *
++ * Avant d'exécuter cette migration en production, vérifiez qu'il n'existe pas
++ * déjà de doublons d'e-mail en base (sinon la migration échouera) :
++ *   SELECT email, COUNT(*) FROM "user" GROUP BY email HAVING COUNT(*) > 1;
++ */
++final class Version20260919120000 extends AbstractMigration
++{
++    public function getDescription(): string
++    {
++        return "Ajoute une contrainte d'unicité sur user.email";
++    }
++
++    public function up(Schema $schema): void
++    {
++        $this->addSql('CREATE UNIQUE INDEX UNIQ_8D93D649E7927C74 ON "user" (email)');
++    }
++
++    public function down(Schema $schema): void
++    {
++        $this->addSql('DROP INDEX UNIQ_8D93D649E7927C74');
++    }
++}
+diff --git a/public/apple-touch-icon.png b/public/apple-touch-icon.png
+new file mode 100644
+index 0000000..fd01e62
+Binary files /dev/null and b/public/apple-touch-icon.png differ
+diff --git a/public/favicon.ico b/public/favicon.ico
+new file mode 100644
+index 0000000..ce4ef00
+Binary files /dev/null and b/public/favicon.ico differ
+diff --git a/public/favicon.svg b/public/favicon.svg
+new file mode 100644
+index 0000000..92b3a73
+--- /dev/null
++++ b/public/favicon.svg
+@@ -0,0 +1,5 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
++  <rect width="64" height="64" rx="14" fill="#1D4ED8"/>
++  <text x="32" y="45" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700"
++        fill="#FFFFFF" text-anchor="middle">F</text>
++</svg>
+diff --git a/public/icon-192.png b/public/icon-192.png
+new file mode 100644
+index 0000000..1909ba9
+Binary files /dev/null and b/public/icon-192.png differ
+diff --git a/public/icon-512.png b/public/icon-512.png
+new file mode 100644
+index 0000000..2ab0dea
+Binary files /dev/null and b/public/icon-512.png differ
+diff --git a/public/img/og-image.jpg b/public/img/og-image.jpg
+new file mode 100644
+index 0000000..556f32f
+Binary files /dev/null and b/public/img/og-image.jpg differ
+diff --git a/src/Controller/ClientController.php b/src/Controller/ClientController.php
+index a905d2e..2006627 100644
+--- a/src/Controller/ClientController.php
++++ b/src/Controller/ClientController.php
+@@ -10,15 +10,17 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+ use Symfony\Component\HttpFoundation\Request;
+ use Symfony\Component\HttpFoundation\Response;
+ use Symfony\Component\Routing\Attribute\Route;
++use Symfony\Component\Security\Http\Attribute\IsGranted;
+ 
+ #[Route('/client')]
++#[IsGranted('ROLE_USER')]
+ final class ClientController extends AbstractController
+ {
+     #[Route(name: 'app_client_index', methods: ['GET'])]
+     public function index(ClientRepository $clientRepository): Response
+     {
+         return $this->render('client/index.html.twig', [
+-            'clients' => $clientRepository->findAll(),
++            'clients' => $clientRepository->findBy(['user' => $this->getUser()]),
+         ]);
+     }
+ 
+@@ -39,13 +41,17 @@ final class ClientController extends AbstractController
+         return $this->render('client/new.html.twig', [
+             'client' => $client,
+             'form' => $form->createView(),
+-            'clients' => $clientRepository->findAll(),
++            'clients' => $clientRepository->findBy(['user' => $this->getUser()]),
+         ]);
+     }
+ 
+     #[Route('/{id}', name: 'app_client_show', methods: ['GET'])]
+     public function show(Client $client): Response
+     {
++        if ($client->getUser() !== $this->getUser()) {
++            throw $this->createAccessDeniedException();
++        }
++
+         return $this->render('client/show.html.twig', [
+             'client' => $client,
+         ]);
+@@ -54,6 +60,10 @@ final class ClientController extends AbstractController
+     #[Route('/{id}/edit', name: 'app_client_edit', methods: ['GET', 'POST'])]
+     public function edit(Request $request, Client $client, EntityManagerInterface $entityManager): Response
+     {
++        if ($client->getUser() !== $this->getUser()) {
++            throw $this->createAccessDeniedException();
++        }
++
+         $form = $this->createForm(ClientType::class, $client);
+         $form->handleRequest($request);
+ 
+@@ -72,6 +82,10 @@ final class ClientController extends AbstractController
+     #[Route('/{id}', name: 'app_client_delete', methods: ['POST'])]
+     public function delete(Request $request, Client $client, EntityManagerInterface $entityManager): Response
+     {
++        if ($client->getUser() !== $this->getUser()) {
++            throw $this->createAccessDeniedException();
++        }
++
+         if ($this->isCsrfTokenValid('delete' . $client->getId(), $request->getPayload()->getString('_token'))) {
+             $entityManager->remove($client);
+             $entityManager->flush();
+diff --git a/src/Controller/InvoiceController.php b/src/Controller/InvoiceController.php
+index f4c720f..d854afd 100644
+--- a/src/Controller/InvoiceController.php
++++ b/src/Controller/InvoiceController.php
+@@ -10,9 +10,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+ use Symfony\Component\HttpFoundation\Request;
+ use Symfony\Component\HttpFoundation\Response;
+ use Symfony\Component\Routing\Attribute\Route;
++use Symfony\Component\Security\Http\Attribute\IsGranted;
+ use Sensiolabs\GotenbergBundle\GotenbergPdfInterface;
+ 
+ #[Route('/invoice')]
++#[IsGranted('ROLE_USER')]
+ final class InvoiceController extends AbstractController
+ {
+ 
+@@ -67,12 +69,16 @@ final class InvoiceController extends AbstractController
+         ]);
+     }
+     #[Route('/{id}/validate', name: 'app_invoice_validate', methods: ['POST'])]
+-    public function validate(Invoice $invoice, EntityManagerInterface $entityManager): Response
++    public function validate(Request $request, Invoice $invoice, EntityManagerInterface $entityManager): Response
+     {
+         if ($invoice->getUser() !== $this->getUser()) {
+             throw $this->createAccessDeniedException();
+         }
+ 
++        if (!$this->isCsrfTokenValid('validate' . $invoice->getId(), $request->getPayload()->getString('_token'))) {
++            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
++        }
++
+         if ($invoice->isDraft()) {
+             $invoice->setStatus(Status::PENDING_PAYMENT);
+             $entityManager->flush();
+@@ -83,12 +89,16 @@ final class InvoiceController extends AbstractController
+     }
+ 
+     #[Route('/{id}/paid', name: 'app_invoice_paid', methods: ['POST'])]
+-    public function markAsPaid(Invoice $invoice, EntityManagerInterface $entityManager): Response
++    public function markAsPaid(Request $request, Invoice $invoice, EntityManagerInterface $entityManager): Response
+     {
+         if ($invoice->getUser() !== $this->getUser()) {
+             throw $this->createAccessDeniedException();
+         }
+ 
++        if (!$this->isCsrfTokenValid('paid' . $invoice->getId(), $request->getPayload()->getString('_token'))) {
++            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
++        }
++
+         if ($invoice->isPending()) {
+             $invoice->setStatus(Status::PAID);
+             $entityManager->flush();
+diff --git a/src/Controller/LegalController.php b/src/Controller/LegalController.php
+new file mode 100644
+index 0000000..3397eb6
+--- /dev/null
++++ b/src/Controller/LegalController.php
+@@ -0,0 +1,22 @@
++<?php
++
++namespace App\Controller;
++
++use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
++use Symfony\Component\HttpFoundation\Response;
++use Symfony\Component\Routing\Attribute\Route;
++
++final class LegalController extends AbstractController
++{
++    #[Route('/politique-de-confidentialite', name: 'app_privacy', methods: ['GET'])]
++    public function privacy(): Response
++    {
++        return $this->render('legal/privacy.html.twig');
++    }
++
++    #[Route('/cgu', name: 'app_terms', methods: ['GET'])]
++    public function terms(): Response
++    {
++        return $this->render('legal/terms.html.twig');
++    }
++}
+diff --git a/src/Controller/MailController.php b/src/Controller/MailController.php
+index 80737a1..c0e3324 100644
+--- a/src/Controller/MailController.php
++++ b/src/Controller/MailController.php
+@@ -7,10 +7,12 @@ use Symfony\Component\HttpFoundation\Response;
+ use Symfony\Component\Mailer\MailerInterface;
+ use Symfony\Component\Mime\Email;
+ use Symfony\Component\Routing\Attribute\Route;
++use Symfony\Component\Security\Http\Attribute\IsGranted;
+ 
+ use Sensiolabs\GotenbergBundle\GotenbergPdfInterface;
+ use Sensiolabs\GotenbergBundle\Processor\TempfileProcessor;
+ 
++#[IsGranted('ROLE_USER')]
+ final class MailController extends AbstractController
+ {
+     #[Route('/mail', name: 'app_mail')]
+diff --git a/src/Controller/ProductController.php b/src/Controller/ProductController.php
+index f315635..8d881d6 100644
+--- a/src/Controller/ProductController.php
++++ b/src/Controller/ProductController.php
+@@ -10,8 +10,10 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+ use Symfony\Component\HttpFoundation\Request;
+ use Symfony\Component\HttpFoundation\Response;
+ use Symfony\Component\Routing\Attribute\Route;
++use Symfony\Component\Security\Http\Attribute\IsGranted;
+ 
+ #[Route('/product')]
++#[IsGranted('ROLE_USER')]
+ final class ProductController extends AbstractController
+ {
+     #[Route(name: 'app_product_index', methods: ['GET'])]
+diff --git a/src/Controller/RegistrationController.php b/src/Controller/RegistrationController.php
+index 60e948b..0472d82 100644
+--- a/src/Controller/RegistrationController.php
++++ b/src/Controller/RegistrationController.php
+@@ -5,7 +5,9 @@ namespace App\Controller;
+ use App\Entity\User;
+ use App\Form\RegistrationFormType;
+ use Doctrine\ORM\EntityManagerInterface;
++use Psr\Cache\CacheItemPoolInterface;
+ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
++use Symfony\Component\DependencyInjection\Attribute\Autowire;
+ use Symfony\Component\HttpFoundation\Request;
+ use Symfony\Component\HttpFoundation\Response;
+ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+@@ -14,17 +16,54 @@ use Symfony\Component\Routing\Attribute\Route;
+ 
+ class RegistrationController extends AbstractController
+ {
++    private const SESSION_KEY_RENDERED_AT = 'registration_form_rendered_at';
++
++    /** Délai minimum (secondes) entre l'affichage du formulaire et sa soumission. */
++    private const MIN_SUBMIT_DELAY_SECONDS = 2;
++
++    /** Nombre maximum d'inscriptions tentées depuis une même IP par heure. */
++    private const MAX_ATTEMPTS_PER_HOUR = 10;
++
++    public function __construct(
++        #[Autowire(service: 'cache.app')]
++        private readonly CacheItemPoolInterface $cache,
++    ) {
++    }
++
+     #[Route('/register', name: 'app_register')]
+     public function register(
+         Request $request,
+         UserPasswordHasherInterface $userPasswordHasher,
+         EntityManagerInterface $entityManager
+     ): Response {
++        $session = $request->hasSession() ? $request->getSession() : null;
++
++        if ($request->isMethod('GET') && $session !== null) {
++            // On mémorise l'heure d'affichage du formulaire pour détecter les
++            // soumissions trop rapides pour être humaines (bots).
++            $session->set(self::SESSION_KEY_RENDERED_AT, time());
++        }
++
+         $user = new User();
+         $form = $this->createForm(RegistrationFormType::class, $user);
+         $form->handleRequest($request);
+ 
+         if ($form->isSubmitted() && $form->isValid()) {
++            if ($this->isRateLimited($request)) {
++                $this->addFlash('error', 'Trop de tentatives. Merci de réessayer plus tard.');
++
++                return $this->redirectToRoute('app_register');
++            }
++
++            if ($this->isSubmittedTooFast($session)) {
++                // Comportement probable d'un bot : on n'enregistre rien, mais on
++                // ne révèle pas la raison exacte pour ne pas aider à contourner
++                // la protection, et on renvoie une page de succès classique.
++                return $this->redirectToRoute('app_login');
++            }
++
++            $this->registerAttempt($request);
++
+             $plainPassword = $form->get('plainPassword')->getData();
+             $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
+ 
+@@ -41,4 +80,40 @@ class RegistrationController extends AbstractController
+             'registrationForm' => $form,
+         ]);
+     }
++
++    private function isSubmittedTooFast(?\Symfony\Component\HttpFoundation\Session\SessionInterface $session): bool
++    {
++        if ($session === null || !$session->has(self::SESSION_KEY_RENDERED_AT)) {
++            // Pas d'info fiable : on laisse passer plutôt que de bloquer un
++            // utilisateur légitime (session expirée, cookies désactivés...).
++            return false;
++        }
++
++        $renderedAt = (int) $session->get(self::SESSION_KEY_RENDERED_AT);
++
++        return (time() - $renderedAt) < self::MIN_SUBMIT_DELAY_SECONDS;
++    }
++
++    private function isRateLimited(Request $request): bool
++    {
++        $item = $this->cache->getItem($this->rateLimitCacheKey($request));
++
++        return $item->isHit() && (int) $item->get() >= self::MAX_ATTEMPTS_PER_HOUR;
++    }
++
++    private function registerAttempt(Request $request): void
++    {
++        $item = $this->cache->getItem($this->rateLimitCacheKey($request));
++        $count = $item->isHit() ? (int) $item->get() : 0;
++
++        $item->set($count + 1);
++        $item->expiresAfter(3600);
++
++        $this->cache->save($item);
++    }
++
++    private function rateLimitCacheKey(Request $request): string
++    {
++        return 'register_attempts_' . md5($request->getClientIp() ?? 'unknown');
++    }
+ }
+\ No newline at end of file
+diff --git a/src/Controller/SeoController.php b/src/Controller/SeoController.php
+new file mode 100644
+index 0000000..3cb43b6
+--- /dev/null
++++ b/src/Controller/SeoController.php
+@@ -0,0 +1,68 @@
++<?php
++
++namespace App\Controller;
++
++use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
++use Symfony\Component\HttpFoundation\Response;
++use Symfony\Component\Routing\Attribute\Route;
++use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
++
++final class SeoController extends AbstractController
++{
++    /**
++     * Pages publiques à référencer dans le sitemap.
++     */
++    private const PUBLIC_ROUTES = [
++        'app_login',
++        'app_register',
++        'app_terms',
++        'app_privacy',
++    ];
++
++    #[Route('/robots.txt', name: 'app_robots', methods: ['GET'])]
++    public function robots(UrlGeneratorInterface $urlGenerator): Response
++    {
++        $sitemapUrl = $urlGenerator->generate('app_sitemap', [], UrlGeneratorInterface::ABSOLUTE_URL);
++
++        $lines = [
++            'User-agent: *',
++            // L'application (dashboard, factures, clients, produits...) est un espace
++            // privé derrière authentification : on évite de faire perdre du temps
++            // au crawler dessus, il ne pourrait de toute façon pas s'y connecter.
++            'Disallow: /dashboard',
++            'Disallow: /profile',
++            'Disallow: /client',
++            'Disallow: /invoice',
++            'Disallow: /product',
++            'Disallow: /mail',
++            'Disallow: /user',
++            '',
++            'Sitemap: ' . $sitemapUrl,
++        ];
++
++        return new Response(implode("\n", $lines) . "\n", 200, [
++            'Content-Type' => 'text/plain; charset=UTF-8',
++        ]);
++    }
++
++    #[Route('/sitemap.xml', name: 'app_sitemap', methods: ['GET'])]
++    public function sitemap(UrlGeneratorInterface $urlGenerator): Response
++    {
++        $urls = array_map(
++            fn (string $routeName) => $urlGenerator->generate($routeName, [], UrlGeneratorInterface::ABSOLUTE_URL),
++            self::PUBLIC_ROUTES
++        );
++
++        $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>');
++
++        foreach ($urls as $url) {
++            $entry = $xml->addChild('url');
++            $entry->addChild('loc', htmlspecialchars($url, ENT_XML1));
++            $entry->addChild('changefreq', 'monthly');
++        }
++
++        return new Response($xml->asXML(), 200, [
++            'Content-Type' => 'application/xml; charset=UTF-8',
++        ]);
++    }
++}
+diff --git a/src/Entity/Client.php b/src/Entity/Client.php
+index e948daf..25919ed 100644
+--- a/src/Entity/Client.php
++++ b/src/Entity/Client.php
+@@ -5,6 +5,7 @@ use App\Repository\ClientRepository;
+ use Doctrine\Common\Collections\ArrayCollection;
+ use Doctrine\Common\Collections\Collection;
+ use Doctrine\ORM\Mapping as ORM;
++use Symfony\Component\Validator\Constraints as Assert;
+ 
+ #[ORM\Entity(repositoryClass: ClientRepository::class)]
+ class Client
+@@ -15,21 +16,28 @@ class Client
+     private ?int $id = null;
+ 
+     #[ORM\Column(length: 255)]
++    #[Assert\NotBlank(message: 'Veuillez renseigner le nom du client.')]
++    #[Assert\Length(max: 255)]
+     private ?string $name = null;
+ 
+     #[ORM\Column(length: 255)]
++    #[Assert\NotBlank(message: 'Veuillez renseigner l\'e-mail du client.')]
++    #[Assert\Email(message: 'Cette adresse e-mail n\'est pas valide.')]
+     private ?string $email = null;
+ 
+     #[ORM\Column(length: 255, nullable: true)]
++    #[Assert\Length(max: 30, maxMessage: 'Le numéro de téléphone est trop long.')]
+     private ?string $phone = null;
+ 
+     #[ORM\Column(length: 255, nullable: true)]
+     private ?string $address = null;
+ 
+     #[ORM\Column(length: 255, nullable: true)]
++    #[Assert\Regex(pattern: '/^\d{14}$/', message: 'Le SIRET doit contenir exactement 14 chiffres.')]
+     private ?string $siret = null;
+ 
+     #[ORM\Column(length: 255, nullable: true)]
++    #[Assert\Length(max: 255)]
+     private ?string $rib = null;
+ 
+     #[ORM\ManyToOne(inversedBy: 'clients')]
+diff --git a/src/Entity/Product.php b/src/Entity/Product.php
+index e881a11..a30d060 100644
+--- a/src/Entity/Product.php
++++ b/src/Entity/Product.php
+@@ -6,6 +6,7 @@ use App\Repository\ProductRepository;
+ use Doctrine\Common\Collections\ArrayCollection;
+ use Doctrine\Common\Collections\Collection;
+ use Doctrine\ORM\Mapping as ORM;
++use Symfony\Component\Validator\Constraints as Assert;
+ 
+ #[ORM\Entity(repositoryClass: ProductRepository::class)]
+ class Product
+@@ -16,15 +17,20 @@ class Product
+     private ?int $id = null;
+ 
+     #[ORM\Column(length: 255)]
++    #[Assert\NotBlank(message: 'Veuillez renseigner le nom du produit.')]
++    #[Assert\Length(max: 255)]
+     private ?string $name = null;
+ 
+     #[ORM\Column(length: 255, nullable: true)]
+     private ?string $description = null;
+ 
+     #[ORM\Column]
++    #[Assert\NotNull(message: 'Veuillez renseigner un prix.')]
++    #[Assert\PositiveOrZero(message: 'Le prix ne peut pas être négatif.')]
+     private ?float $price = null;
+ 
+     #[ORM\Column(enumType: Unit::class)]
++    #[Assert\NotNull(message: 'Veuillez choisir une unité.')]
+     private ?Unit $unit = null;
+ 
+     #[ORM\ManyToOne(inversedBy: 'products')]
+diff --git a/src/Entity/User.php b/src/Entity/User.php
+index ad29cfd..e24e79f 100644
+--- a/src/Entity/User.php
++++ b/src/Entity/User.php
+@@ -5,19 +5,25 @@ use App\Repository\UserRepository;
+ use Doctrine\Common\Collections\ArrayCollection;
+ use Doctrine\Common\Collections\Collection;
+ use Doctrine\ORM\Mapping as ORM;
++use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+ use Symfony\Component\Security\Core\User\UserInterface;
+ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
++use Symfony\Component\Validator\Constraints as Assert;
+ 
+ 
+ #[ORM\Entity(repositoryClass: UserRepository::class)]
+ #[ORM\Table(name: '`user`')]
++#[UniqueEntity(fields: ['email'], message: 'Un compte existe déjà avec cette adresse e-mail.')]
+ class User implements UserInterface, PasswordAuthenticatedUserInterface
+ {   #[ORM\Id]
+     #[ORM\GeneratedValue]
+     #[ORM\Column]
+     private ?int $id = null;
+ 
+-    #[ORM\Column(length: 180)]
++    #[ORM\Column(length: 180, unique: true)]
++    #[Assert\NotBlank(message: 'Veuillez renseigner votre adresse e-mail.')]
++    #[Assert\Email(message: 'Cette adresse e-mail n\'est pas valide.')]
++    #[Assert\Length(max: 180)]
+     private ?string $email = null;
+ 
+     #[ORM\Column]
+@@ -27,18 +33,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
+     private ?string $password = null;
+ 
+     #[ORM\Column(length: 255)]
++    #[Assert\NotBlank(message: 'Veuillez renseigner votre prénom.')]
++    #[Assert\Length(min: 2, max: 255, minMessage: 'Le prénom doit contenir au moins {{ limit }} caractères.')]
+     private ?string $firstName = null;
+ 
+     #[ORM\Column(length: 255)]
++    #[Assert\NotBlank(message: 'Veuillez renseigner votre nom.')]
++    #[Assert\Length(min: 2, max: 255, minMessage: 'Le nom doit contenir au moins {{ limit }} caractères.')]
+     private ?string $lastName = null;
+ 
+     #[ORM\Column(length: 255)]
++    #[Assert\NotBlank(message: 'Veuillez renseigner le nom de votre société.')]
++    #[Assert\Length(max: 255)]
+     private ?string $companyName = null;
+ 
+     #[ORM\Column(length: 255, nullable: true)]
++    #[Assert\Iban(message: 'Cet IBAN n\'est pas valide.')]
+     private ?string $iban = null;
+ 
+     #[ORM\Column(length: 255, nullable: true)]
++    #[Assert\Regex(pattern: '/^\d{14}$/', message: 'Le SIRET doit contenir exactement 14 chiffres.')]
+     private ?string $siret = null;
+ 
+     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Client::class)]
+diff --git a/src/EventSubscriber/HttpsRedirectSubscriber.php b/src/EventSubscriber/HttpsRedirectSubscriber.php
+new file mode 100644
+index 0000000..686080b
+--- /dev/null
++++ b/src/EventSubscriber/HttpsRedirectSubscriber.php
+@@ -0,0 +1,76 @@
++<?php
++
++namespace App\EventSubscriber;
++
++use Symfony\Component\HttpFoundation\RedirectResponse;
++use Symfony\Component\HttpKernel\Event\RequestEvent;
++use Symfony\Component\HttpKernel\Event\ResponseEvent;
++use Symfony\Component\HttpKernel\KernelEvents;
++use Symfony\Component\EventDispatcher\EventSubscriberInterface;
++
++/**
++ * Force HTTPS en production et ajoute l'en-tête HSTS.
++ *
++ * N'agit qu'en production (APP_ENV=prod) pour ne jamais gêner le développement
++ * local en HTTP. Si l'application tourne derrière un reverse proxy / load
++ * balancer qui termine le TLS (Cloudflare, un LB cloud, un Nginx en frontal...),
++ * pensez à configurer `framework.trusted_proxies` et `trusted_headers` dans
++ * config/packages/framework.yaml, sinon $request->isSecure() renverra
++ * toujours false côté PHP et provoquera une boucle de redirection infinie.
++ */
++final class HttpsRedirectSubscriber implements EventSubscriberInterface
++{
++    public function __construct(
++        private readonly string $environment,
++    ) {
++    }
++
++    public function onKernelRequest(RequestEvent $event): void
++    {
++        if (!$event->isMainRequest() || 'prod' !== $this->environment) {
++            return;
++        }
++
++        $request = $event->getRequest();
++
++        if ($request->isSecure()) {
++            return;
++        }
++
++        // On ne redirige que les requêtes "sûres" (GET/HEAD) : un POST redirigé
++        // perdrait son corps et casserait les formulaires.
++        if (!\in_array($request->getMethod(), ['GET', 'HEAD'], true)) {
++            return;
++        }
++
++        $httpsUrl = 'https://' . $request->getHost() . $request->getRequestUri();
++
++        $event->setResponse(new RedirectResponse($httpsUrl, RedirectResponse::HTTP_MOVED_PERMANENTLY));
++    }
++
++    public function onKernelResponse(ResponseEvent $event): void
++    {
++        if (!$event->isMainRequest() || 'prod' !== $this->environment) {
++            return;
++        }
++
++        if (!$event->getRequest()->isSecure()) {
++            return;
++        }
++
++        // HSTS : demande aux navigateurs de ne plus jamais retenter du HTTP
++        // sur ce domaine pendant 1 an, y compris pour les sous-domaines.
++        $event->getResponse()->headers->set(
++            'Strict-Transport-Security',
++            'max-age=31536000; includeSubDomains'
++        );
++    }
++
++    public static function getSubscribedEvents(): array
++    {
++        return [
++            KernelEvents::REQUEST => ['onKernelRequest', 30],
++            KernelEvents::RESPONSE => ['onKernelResponse', -10],
++        ];
++    }
++}
+diff --git a/src/Form/RegistrationFormType.php b/src/Form/RegistrationFormType.php
+index a8e7ecc..802e83b 100644
+--- a/src/Form/RegistrationFormType.php
++++ b/src/Form/RegistrationFormType.php
+@@ -6,8 +6,10 @@ use App\Entity\User;
+ use Symfony\Component\Form\AbstractType;
+ use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+ use Symfony\Component\Form\Extension\Core\Type\PasswordType;
++use Symfony\Component\Form\Extension\Core\Type\TextType;
+ use Symfony\Component\Form\FormBuilderInterface;
+ use Symfony\Component\OptionsResolver\OptionsResolver;
++use Symfony\Component\Validator\Constraints\Blank;
+ use Symfony\Component\Validator\Constraints\IsTrue;
+ use Symfony\Component\Validator\Constraints\Length;
+ use Symfony\Component\Validator\Constraints\NotBlank;
+@@ -16,12 +18,30 @@ class RegistrationFormType extends AbstractType
+ {
+     public function buildForm(FormBuilderInterface $builder, array $options): void
+     {
+-        $builder    
++        $builder
+             ->add('email')
+             ->add('firstName')
+             ->add('lastName')
+             ->add('companyName')
+             ->add('iban')
++            // Honeypot anti-spam : champ invisible pour un humain (caché en CSS,
++            // pas en display:none pour que certains bots naïfs le remplissent
++            // quand même) mais visible pour un bot qui remplit tous les champs
++            // du formulaire. Un humain le laisse toujours vide.
++            ->add('website', TextType::class, [
++                'mapped' => false,
++                'required' => false,
++                'label' => false,
++                'attr' => [
++                    'autocomplete' => 'off',
++                    'tabindex' => '-1',
++                    'aria-hidden' => 'true',
++                    'class' => 'hp-field',
++                ],
++                'constraints' => [
++                    new Blank(message: 'Ce champ doit rester vide.'),
++                ],
++            ])
+             ->add('agreeTerms', CheckboxType::class, [
+                 'mapped' => false,
+                 'constraints' => [
+diff --git a/templates/base.html.twig b/templates/base.html.twig
+index a9cdfb3..cbc4afb 100644
+--- a/templates/base.html.twig
++++ b/templates/base.html.twig
+@@ -1,9 +1,72 @@
+ <!DOCTYPE html>
+-<html>
++<html lang="fr">
+     <head>
+         <meta charset="UTF-8">
+-        <title>{% block title %}Welcome!{% endblock %}</title>
+-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
++        <meta name="viewport" content="width=device-width, initial-scale=1">
++        <meta http-equiv="X-UA-Compatible" content="ie=edge">
++        <meta name="theme-color" content="{{ app_theme_color }}">
++
++        <title>{% block title %}{{ app_name }}{% endblock %} · {{ app_name }}</title>
++
++        {% set current_description = block('meta_description') %}
++        <meta name="description" content="{% block meta_description %}{{ app_description }}{% endblock %}">
++        <link rel="canonical" href="{{ app.request ? app.request.uri : '' }}">
++
++        {# Open Graph / réseaux sociaux #}
++        <meta property="og:site_name" content="{{ app_name }}">
++        <meta property="og:type" content="website">
++        <meta property="og:title" content="{% block og_title %}{{ block('title') }}{% endblock %}">
++        <meta property="og:description" content="{{ current_description }}">
++        <meta property="og:url" content="{{ app.request ? app.request.uri : '' }}">
++        <meta property="og:image" content="{{ app.request ? app.request.schemeAndHttpHost : '' }}{{ asset('img/og-image.jpg') }}">
++        <meta property="og:image:width" content="1200">
++        <meta property="og:image:height" content="630">
++        <meta property="og:locale" content="fr_FR">
++
++        {# Twitter Card #}
++        <meta name="twitter:card" content="summary_large_image">
++        <meta name="twitter:title" content="{{ block('og_title') }}">
++        <meta name="twitter:description" content="{{ current_description }}">
++        <meta name="twitter:image" content="{{ app.request ? app.request.schemeAndHttpHost : '' }}{{ asset('img/og-image.jpg') }}">
++
++        {# Favicons #}
++        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
++        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
++        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
++
++        {% if ga_measurement_id %}
++        <script>
++            // Analytics chargé UNIQUEMENT si l'utilisateur a accepté les cookies
++            // (bandeau de consentement) — voir components/CookieConsent.html.twig
++            // et assets/controllers/cookie_consent_controller.js.
++            (function () {
++                var GA_ID = {{ ga_measurement_id|json_encode|raw }};
++                var loaded = false;
++
++                function loadAnalytics() {
++                    if (loaded) return;
++                    loaded = true;
++
++                    var script = document.createElement('script');
++                    script.async = true;
++                    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
++                    document.head.appendChild(script);
++
++                    window.dataLayer = window.dataLayer || [];
++                    window.gtag = function () { window.dataLayer.push(arguments); };
++                    window.gtag('js', new Date());
++                    window.gtag('config', GA_ID, { anonymize_ip: true });
++                }
++
++                window.addEventListener('cookie-consent:changed', function (event) {
++                    if (event.detail && event.detail.analytics) {
++                        loadAnalytics();
++                    }
++                });
++            })();
++        </script>
++        {% endif %}
++
+         {% block stylesheets %}
+         {% endblock %}
+ 
+@@ -20,5 +83,6 @@
+     </head>
+     <body>
+         {% block body %}{% endblock %}
++        {% include 'components/CookieConsent.html.twig' %}
+     </body>
+ </html>
+diff --git a/templates/bundles/TwigBundle/Exception/error.html.twig b/templates/bundles/TwigBundle/Exception/error.html.twig
+new file mode 100644
+index 0000000..8297fdc
+--- /dev/null
++++ b/templates/bundles/TwigBundle/Exception/error.html.twig
+@@ -0,0 +1,23 @@
++{% extends 'base.html.twig' %}
++
++{% block title %}Une erreur est survenue{% endblock %}
++{% block meta_description %}Une erreur inattendue est survenue sur {{ app_name }}.{% endblock %}
++
++{% block body %}
++<div class="min-h-screen bg-[#F9FAFB] font-sans flex flex-col items-center justify-center gap-6 px-4 text-center">
++    <span class="text-blue-700 font-extrabold text-7xl">{{ status_code|default('Oups') }}</span>
++
++    <div class="flex flex-col gap-2">
++        <h1 class="text-2xl font-bold text-gray-900">Une erreur est survenue</h1>
++        <p class="text-gray-500 max-w-md">
++            Quelque chose s'est mal passé de notre côté. Réessayez dans quelques instants,
++            ou revenez à l'accueil.
++        </p>
++    </div>
++
++    <a href="{{ path('app_dashboard') }}"
++       class="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium transition">
++        Retour au tableau de bord
++    </a>
++</div>
++{% endblock %}
+diff --git a/templates/bundles/TwigBundle/Exception/error403.html.twig b/templates/bundles/TwigBundle/Exception/error403.html.twig
+new file mode 100644
+index 0000000..6c2468d
+--- /dev/null
++++ b/templates/bundles/TwigBundle/Exception/error403.html.twig
+@@ -0,0 +1,23 @@
++{% extends 'base.html.twig' %}
++
++{% block title %}Accès refusé (403){% endblock %}
++{% block meta_description %}Vous n'avez pas les droits nécessaires pour accéder à cette page {{ app_name }}.{% endblock %}
++
++{% block body %}
++<div class="min-h-screen bg-[#F9FAFB] font-sans flex flex-col items-center justify-center gap-6 px-4 text-center">
++    <span class="text-blue-700 font-extrabold text-7xl">403</span>
++
++    <div class="flex flex-col gap-2">
++        <h1 class="text-2xl font-bold text-gray-900">Accès refusé</h1>
++        <p class="text-gray-500 max-w-md">
++            Vous n'avez pas les droits nécessaires pour voir cette page, ou vous devez
++            vous connecter avec le bon compte.
++        </p>
++    </div>
++
++    <a href="{{ path('app_dashboard') }}"
++       class="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium transition">
++        Retour au tableau de bord
++    </a>
++</div>
++{% endblock %}
+diff --git a/templates/bundles/TwigBundle/Exception/error404.html.twig b/templates/bundles/TwigBundle/Exception/error404.html.twig
+new file mode 100644
+index 0000000..862ae75
+--- /dev/null
++++ b/templates/bundles/TwigBundle/Exception/error404.html.twig
+@@ -0,0 +1,23 @@
++{% extends 'base.html.twig' %}
++
++{% block title %}Page introuvable (404){% endblock %}
++{% block meta_description %}Cette page n'existe pas ou plus sur {{ app_name }}.{% endblock %}
++
++{% block body %}
++<div class="min-h-screen bg-[#F9FAFB] font-sans flex flex-col items-center justify-center gap-6 px-4 text-center">
++    <span class="text-blue-700 font-extrabold text-7xl">404</span>
++
++    <div class="flex flex-col gap-2">
++        <h1 class="text-2xl font-bold text-gray-900">Cette page n'existe pas</h1>
++        <p class="text-gray-500 max-w-md">
++            Le lien que vous avez suivi est peut-être cassé, ou la page a été déplacée
++            ou supprimée.
++        </p>
++    </div>
++
++    <a href="{{ path('app_dashboard') }}"
++       class="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium transition">
++        Retour au tableau de bord
++    </a>
++</div>
++{% endblock %}
+diff --git a/templates/client/_form.html.twig b/templates/client/_form.html.twig
+index ece1ed6..b1a21e6 100644
+--- a/templates/client/_form.html.twig
++++ b/templates/client/_form.html.twig
+@@ -16,6 +16,7 @@
+             class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+             placeholder: 'Acme Corp'
+         }}) }}
++        <p class="mt-1 text-sm text-red-600">{{ form_errors(form.name) }}</p>
+     </div>
+ 
+     <div class="grid grid-cols-2 gap-4">
+@@ -25,6 +26,7 @@
+                 class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+                 placeholder: 'contact@acme.fr'
+             }}) }}
++            <p class="mt-1 text-sm text-red-600">{{ form_errors(form.email) }}</p>
+         </div>
+         <div>
+             <label class="block text-sm font-medium text-gray-700 mb-1.5">Téléphone</label>
+@@ -32,6 +34,7 @@
+                 class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+                 placeholder: '+33 6 00 00 00 00'
+             }}) }}
++            <p class="mt-1 text-sm text-red-600">{{ form_errors(form.phone) }}</p>
+         </div>
+     </div>
+ 
+@@ -42,6 +45,7 @@
+             rows: 3,
+             placeholder: '12 rue de la Paix, 75001 Paris'
+         }}) }}
++        <p class="mt-1 text-sm text-red-600">{{ form_errors(form.address) }}</p>
+     </div>
+ 
+     <div class="grid grid-cols-2 gap-4">
+@@ -54,6 +58,7 @@
+                 class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+                 placeholder: '123 456 789 00012'
+             }}) }}
++            <p class="mt-1 text-sm text-red-600">{{ form_errors(form.siret) }}</p>
+         </div>
+         <div>
+             <label class="block text-sm font-medium text-gray-700 mb-1.5">
+@@ -64,6 +69,7 @@
+                 class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+                 placeholder: 'FR76 0000 0000 0000'
+             }}) }}
++            <p class="mt-1 text-sm text-red-600">{{ form_errors(form.rib) }}</p>
+         </div>
+     </div>
+ 
+diff --git a/templates/client/_row_actions.html.twig b/templates/client/_row_actions.html.twig
+new file mode 100644
+index 0000000..ba66599
+--- /dev/null
++++ b/templates/client/_row_actions.html.twig
+@@ -0,0 +1,43 @@
++{# Attend une variable `client` dans le contexte. #}
++<a href="{{ path('app_client_show', {'id': client.id}) }}"
++   aria-label="Voir le client {{ client.name }}"><svg width="17" height="17"
++        aria-hidden="true" focusable="false"
++        xmlns="http://www.w3.org/2000/svg"
++        viewBox="0 0 576 512"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
++        <path fill="rgb(0, 97, 95)"
++            d="M288 80C222.8 80 169.2 109.6 128.1 147.7 89.6 183.5 63 226 49.4 256 63 286 89.6 328.5 128.1 364.3 169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.4 328.5 513 286 526.6 256 513 226 486.4 183.5 447.9 147.7 406.8 109.6 353.2 80 288 80zM95.4 112.6C142.5 68.8 207.2 32 288 32s145.5 36.8 192.6 80.6c46.8 43.5 78.1 95.4 93 131.1 3.3 7.9 3.3 16.7 0 24.6-14.9 35.7-46.2 87.7-93 131.1-47.1 43.7-111.8 80.6-192.6 80.6S142.5 443.2 95.4 399.4c-46.8-43.5-78.1-95.4-93-131.1-3.3-7.9-3.3-16.7 0-24.6 14.9-35.7 46.2-87.7 93-131.1zM288 336c44.2 0 80-35.8 80-80 0-29.6-16.1-55.5-40-69.3-1.4 59.7-49.6 107.9-109.3 109.3 13.8 23.9 39.7 40 69.3 40zm-79.6-88.4c2.5 .3 5 .4 7.6 .4 35.3 0 64-28.7 64-64 0-2.6-.2-5.1-.4-7.6-37.4 3.9-67.2 33.7-71.1 71.1zm45.6-115c10.8-3 22.2-4.5 33.9-4.5 8.8 0 17.5 .9 25.8 2.6 .3 .1 .5 .1 .8 .2 57.9 12.2 101.4 63.7 101.4 125.2 0 70.7-57.3 128-128 128-61.6 0-113-43.5-125.2-101.4-1.8-8.6-2.8-17.5-2.8-26.6 0-11 1.4-21.8 4-32 .2-.7 .3-1.3 .5-1.9 11.9-43.4 46.1-77.6 89.5-89.5z" />
++    </svg></a>
++<a href="{{ path('app_client_edit', {'id': client.id}) }}"
++   aria-label="Modifier le client {{ client.name }}"><svg width="17" height="17"
++        aria-hidden="true" focusable="false"
++        viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
++        <path
++            d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.3321 0.744853 15.401 0.761464 15.4667C0.778075 15.5323 0.812141 15.5922 0.860048 15.64C0.907955 15.6879 0.967916 15.7218 1.03357 15.7383C1.09922 15.7548 1.16812 15.7533 1.23295 15.7338L4.4977 14.7438C4.73258 14.6724 4.94633 14.5444 5.1202 14.371L15.1305 4.35929Z"
++            stroke="#155DFC" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++    </svg>
++</a>
++<form method="post" action="{{ path('app_client_delete', {'id': client.id}) }}"
++      onsubmit="return confirm('Supprimer ce client ?');">
++    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ client.id) }}">
++    <button type="submit" aria-label="Supprimer le client {{ client.name }}"
++            class="bg-transparent border-0 p-0 cursor-pointer">
++        <svg width="15" height="17" aria-hidden="true" focusable="false"
++            viewBox="0 0 15 17" fill="none" xmlns="http://www.w3.org/2000/svg">
++        <path d="M0.75 3.75H14.25" stroke="#E7000B" stroke-width="1.5"
++            stroke-linecap="round" stroke-linejoin="round" />
++        <path
++            d="M12.75 3.75V14.25C12.75 15 12 15.75 11.25 15.75H3.75C3 15.75 2.25 15 2.25 14.25V3.75"
++            stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++        <path
++            d="M4.5 3.75V2.25C4.5 1.5 5.25 0.75 6 0.75H9C9.75 0.75 10.5 1.5 10.5 2.25V3.75"
++            stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++        <path d="M6 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++        <path d="M9 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++    </svg>
++    </button>
++</form>
+diff --git a/templates/client/edit.html.twig b/templates/client/edit.html.twig
+index 392b1d3..f48a7ac 100644
+--- a/templates/client/edit.html.twig
++++ b/templates/client/edit.html.twig
+@@ -4,7 +4,7 @@
+ 
+ {% block body %}
+ 
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+ 
+     <twig:NavAside/>
+ 
+diff --git a/templates/client/index.html.twig b/templates/client/index.html.twig
+index 8600355..151603f 100644
+--- a/templates/client/index.html.twig
++++ b/templates/client/index.html.twig
+@@ -4,7 +4,7 @@
+ 
+ {% block body %}
+ 
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+ 
+     <twig:NavAside />
+ 
+@@ -23,6 +23,7 @@
+         </div>
+ 
+         <div class="bg-white rounded-lg shadow overflow-hidden">
++            <div class="overflow-x-auto">
+ 
+             <table class="w-full border-collapse">
+ 
+@@ -51,40 +52,7 @@
+                         <td class="p-4">{{ client.rib }}</td>
+ 
+                         <td class="p-4 flex gap-3">
+-
+-                            <a href="{{ path('app_client_show', {'id': client.id}) }}"><svg width="17" height="17"
+-                                    xmlns="http://www.w3.org/2000/svg"
+-                                    viewBox="0 0 576 512"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+-                                    <path fill="rgb(0, 97, 95)"
+-                                        d="M288 80C222.8 80 169.2 109.6 128.1 147.7 89.6 183.5 63 226 49.4 256 63 286 89.6 328.5 128.1 364.3 169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.4 328.5 513 286 526.6 256 513 226 486.4 183.5 447.9 147.7 406.8 109.6 353.2 80 288 80zM95.4 112.6C142.5 68.8 207.2 32 288 32s145.5 36.8 192.6 80.6c46.8 43.5 78.1 95.4 93 131.1 3.3 7.9 3.3 16.7 0 24.6-14.9 35.7-46.2 87.7-93 131.1-47.1 43.7-111.8 80.6-192.6 80.6S142.5 443.2 95.4 399.4c-46.8-43.5-78.1-95.4-93-131.1-3.3-7.9-3.3-16.7 0-24.6 14.9-35.7 46.2-87.7 93-131.1zM288 336c44.2 0 80-35.8 80-80 0-29.6-16.1-55.5-40-69.3-1.4 59.7-49.6 107.9-109.3 109.3 13.8 23.9 39.7 40 69.3 40zm-79.6-88.4c2.5 .3 5 .4 7.6 .4 35.3 0 64-28.7 64-64 0-2.6-.2-5.1-.4-7.6-37.4 3.9-67.2 33.7-71.1 71.1zm45.6-115c10.8-3 22.2-4.5 33.9-4.5 8.8 0 17.5 .9 25.8 2.6 .3 .1 .5 .1 .8 .2 57.9 12.2 101.4 63.7 101.4 125.2 0 70.7-57.3 128-128 128-61.6 0-113-43.5-125.2-101.4-1.8-8.6-2.8-17.5-2.8-26.6 0-11 1.4-21.8 4-32 .2-.7 .3-1.3 .5-1.9 11.9-43.4 46.1-77.6 89.5-89.5z" />
+-                                </svg></a>
+-                            <a href="{{ path('app_client_edit', {'id': client.id}) }}"><svg width="17" height="17"
+-                                    viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+-                                    <path
+-                                        d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.3321 0.744853 15.401 0.761464 15.4667C0.778075 15.5323 0.812141 15.5922 0.860048 15.64C0.907955 15.6879 0.967916 15.7218 1.03357 15.7383C1.09922 15.7548 1.16812 15.7533 1.23295 15.7338L4.4977 14.7438C4.73258 14.6724 4.94633 14.5444 5.1202 14.371L15.1305 4.35929Z"
+-                                        stroke="#155DFC" stroke-width="1.5" stroke-linecap="round"
+-                                        stroke-linejoin="round" />
+-                                </svg>
+-                            </a>
+-                            <a href="{{ path('app_client_delete', {'id': client.id}) }}"><svg width="15" height="17"
+-                                    viewBox="0 0 15 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+-                                    <path d="M0.75 3.75H14.25" stroke="#E7000B" stroke-width="1.5"
+-                                        stroke-linecap="round" stroke-linejoin="round" />
+-                                    <path
+-                                        d="M12.75 3.75V14.25C12.75 15 12 15.75 11.25 15.75H3.75C3 15.75 2.25 15 2.25 14.25V3.75"
+-                                        stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                        stroke-linejoin="round" />
+-                                    <path
+-                                        d="M4.5 3.75V2.25C4.5 1.5 5.25 0.75 6 0.75H9C9.75 0.75 10.5 1.5 10.5 2.25V3.75"
+-                                        stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                        stroke-linejoin="round" />
+-                                    <path d="M6 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                        stroke-linejoin="round" />
+-                                    <path d="M9 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                        stroke-linejoin="round" />
+-                                </svg>
+-                            </a>
+-
++                            {{ include('client/_row_actions.html.twig', {client: client}) }}
+                         </td>
+ 
+                     </tr>
+@@ -100,6 +68,7 @@
+ 
+             </table>
+ 
++            </div>
+         </div>
+ 
+     </main>
+diff --git a/templates/client/new.html.twig b/templates/client/new.html.twig
+index 31d5644..8e91a72 100644
+--- a/templates/client/new.html.twig
++++ b/templates/client/new.html.twig
+@@ -4,7 +4,7 @@
+ 
+ {% block body %}
+ 
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+ 
+     <twig:NavAside />
+ 
+@@ -66,38 +66,7 @@
+                             <td class="p-4">{{ client.rib }}</td>
+ 
+                             <td class="p-4 flex gap-2">
+-                                <a href="{{ path('app_client_show', {'id': client.id}) }}"><svg width="17" height="17"
+-                                        xmlns="http://www.w3.org/2000/svg"
+-                                        viewBox="0 0 576 512"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+-                                        <path fill="rgb(0, 97, 95)"
+-                                            d="M288 80C222.8 80 169.2 109.6 128.1 147.7 89.6 183.5 63 226 49.4 256 63 286 89.6 328.5 128.1 364.3 169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.4 328.5 513 286 526.6 256 513 226 486.4 183.5 447.9 147.7 406.8 109.6 353.2 80 288 80zM95.4 112.6C142.5 68.8 207.2 32 288 32s145.5 36.8 192.6 80.6c46.8 43.5 78.1 95.4 93 131.1 3.3 7.9 3.3 16.7 0 24.6-14.9 35.7-46.2 87.7-93 131.1-47.1 43.7-111.8 80.6-192.6 80.6S142.5 443.2 95.4 399.4c-46.8-43.5-78.1-95.4-93-131.1-3.3-7.9-3.3-16.7 0-24.6 14.9-35.7 46.2-87.7 93-131.1zM288 336c44.2 0 80-35.8 80-80 0-29.6-16.1-55.5-40-69.3-1.4 59.7-49.6 107.9-109.3 109.3 13.8 23.9 39.7 40 69.3 40zm-79.6-88.4c2.5 .3 5 .4 7.6 .4 35.3 0 64-28.7 64-64 0-2.6-.2-5.1-.4-7.6-37.4 3.9-67.2 33.7-71.1 71.1zm45.6-115c10.8-3 22.2-4.5 33.9-4.5 8.8 0 17.5 .9 25.8 2.6 .3 .1 .5 .1 .8 .2 57.9 12.2 101.4 63.7 101.4 125.2 0 70.7-57.3 128-128 128-61.6 0-113-43.5-125.2-101.4-1.8-8.6-2.8-17.5-2.8-26.6 0-11 1.4-21.8 4-32 .2-.7 .3-1.3 .5-1.9 11.9-43.4 46.1-77.6 89.5-89.5z" />
+-                                    </svg></a>
+-                                <a href="{{ path('app_client_edit', {'id': client.id}) }}"><svg width="17" height="17"
+-                                        viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+-                                        <path
+-                                            d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.3321 0.744853 15.401 0.761464 15.4667C0.778075 15.5323 0.812141 15.5922 0.860048 15.64C0.907955 15.6879 0.967916 15.7218 1.03357 15.7383C1.09922 15.7548 1.16812 15.7533 1.23295 15.7338L4.4977 14.7438C4.73258 14.6724 4.94633 14.5444 5.1202 14.371L15.1305 4.35929Z"
+-                                            stroke="#155DFC" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                    </svg>
+-                                </a>
+-                                <a href="{{ path('app_client_delete', {'id': client.id}) }}"><svg width="15" height="17"
+-                                        viewBox="0 0 15 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+-                                        <path d="M0.75 3.75H14.25" stroke="#E7000B" stroke-width="1.5"
+-                                            stroke-linecap="round" stroke-linejoin="round" />
+-                                        <path
+-                                            d="M12.75 3.75V14.25C12.75 15 12 15.75 11.25 15.75H3.75C3 15.75 2.25 15 2.25 14.25V3.75"
+-                                            stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                        <path
+-                                            d="M4.5 3.75V2.25C4.5 1.5 5.25 0.75 6 0.75H9C9.75 0.75 10.5 1.5 10.5 2.25V3.75"
+-                                            stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                        <path d="M6 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                        <path d="M9 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                    </svg>
+-                                </a>
++                                {{ include('client/_row_actions.html.twig', {client: client}) }}
+                             </td>
+ 
+                         </tr>
+diff --git a/templates/client/show.html.twig b/templates/client/show.html.twig
+index 5bfe923..2f6cd69 100644
+--- a/templates/client/show.html.twig
++++ b/templates/client/show.html.twig
+@@ -4,7 +4,7 @@
+ 
+ {% block body %}
+ 
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+ 
+     <twig:NavAside/>
+ 
+diff --git a/templates/components/CookieConsent.html.twig b/templates/components/CookieConsent.html.twig
+new file mode 100644
+index 0000000..52c2847
+--- /dev/null
++++ b/templates/components/CookieConsent.html.twig
+@@ -0,0 +1,23 @@
++<div data-controller="cookie-consent">
++    <div data-cookie-consent-target="banner"
++         class="hidden fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
++        <div class="max-w-3xl mx-auto bg-white border border-gray-200 rounded-xl shadow-lg p-5 flex flex-col sm:flex-row sm:items-center gap-4">
++            <p class="text-sm text-gray-600 flex-1">
++                Nous utilisons un cookie strictement nécessaire au fonctionnement de {{ app_name }}
++                (connexion, sécurité). Avec votre accord, nous utilisons aussi des cookies de mesure
++                d'audience pour améliorer le service.
++                <a href="{{ path('app_privacy') }}" class="text-blue-700 underline">En savoir plus</a>.
++            </p>
++            <div class="flex items-center gap-2 shrink-0">
++                <button type="button" data-action="cookie-consent#rejectNonEssential"
++                        class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-lg transition">
++                    Refuser
++                </button>
++                <button type="button" data-action="cookie-consent#acceptAll"
++                        class="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition">
++                    Tout accepter
++                </button>
++            </div>
++        </div>
++    </div>
++</div>
+diff --git a/templates/components/InvoiceFormComponent.html.twig b/templates/components/InvoiceFormComponent.html.twig
+index 2f10110..b076557 100644
+--- a/templates/components/InvoiceFormComponent.html.twig
++++ b/templates/components/InvoiceFormComponent.html.twig
+@@ -50,14 +50,14 @@
+             <tbody>
+                 {% if lines is empty %}
+                     <tr>
+-                        <td colspan="5" class="py-6 text-center text-sm text-gray-400">Aucune ligne ajoutée</td>
++                        <td colspan="5" class="py-6 text-center text-sm text-gray-500">Aucune ligne ajoutée</td>
+                     </tr>
+                 {% else %}
+                     {% for i, line in lines %}
+                         <tr class="border-b border-gray-50">
+                             <td class="py-3">
+                                 <p class="text-sm font-medium text-gray-900">{{ line.name }}</p>
+-                                <p class="text-xs text-gray-400">{{ line.description }}</p>
++                                <p class="text-xs text-gray-500">{{ line.description }}</p>
+                             </td>
+                             <td class="py-3 text-right text-sm text-gray-700">{{ line.quantity }}</td>
+                             <td class="py-3 text-right text-sm text-gray-700">{{ line.unitPrice|number_format(2) }} €</td>
+@@ -69,8 +69,9 @@
+                                         data-live-action-param="removeLine"
+                                         data-live-index-param="{{ i }}"
+                                         type="button"
+-                                        class="text-gray-300 hover:text-red-500 transition-colors">
+-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
++                                        aria-label="Supprimer cette ligne"
++                                        class="text-gray-400 hover:text-red-500 transition-colors">
++                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                                         <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                                     </svg>
+                                 </button>
+diff --git a/templates/components/NavAside.html.twig b/templates/components/NavAside.html.twig
+index 1d69a9c..d6a0dc1 100644
+--- a/templates/components/NavAside.html.twig
++++ b/templates/components/NavAside.html.twig
+@@ -1,6 +1,37 @@
+-<div{{ attributes }}>
+-    <aside class="w-56 min-h-screen bg-white flex flex-col py-4 px-3 gap-1 shrink-0 border-r border-gray-200">
+-        <svg width="151" height="28" viewBox="0 0 151 28" fill="none" xmlns="http://www.w3.org/2000/svg">
++<div{{ attributes }} data-controller="sidebar">
++    {# Barre mobile : visible uniquement sous md, ouvre le menu en tiroir. #}
++    <div class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 sticky top-0 z-30">
++        <a href="{{ path('app_dashboard') }}" class="flex items-center gap-2 font-bold text-blue-700">
++            <span class="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center text-xs">F</span>
++            {{ app_name }}
++        </a>
++        <button type="button" data-action="sidebar#toggle" data-sidebar-target="button"
++                aria-label="Ouvrir le menu" aria-expanded="false"
++                class="p-2 rounded-lg text-gray-600 hover:bg-gray-100">
++            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"
++                 xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
++                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
++            </svg>
++        </button>
++    </div>
++
++    {# Fond assombri mobile : ferme le menu au clic en dehors. #}
++    <div data-sidebar-target="backdrop" data-action="click->sidebar#close"
++         class="hidden fixed inset-0 bg-black/40 z-40 md:hidden"></div>
++
++    <aside data-sidebar-target="panel"
++        class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full transition-transform duration-200 ease-in-out
++               md:static md:translate-x-0 md:w-56 md:z-auto
++               min-h-screen bg-white flex flex-col py-4 px-3 gap-1 shrink-0 border-r border-gray-200 overflow-y-auto">
++        <button type="button" data-action="sidebar#close" aria-label="Fermer le menu"
++                class="md:hidden self-end p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 mb-1">
++            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
++                <path d="M15 5L5 15" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
++                <path d="M5 5L15 15" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
++            </svg>
++        </button>
++
++        <svg width="151" height="28" viewBox="0 0 151 28" fill="none" xmlns="http://www.w3.org/2000/svg" class="hidden md:block">
+             <path
+                 d="M4.66663 2.33325V25.6666L6.99996 24.4999L9.33329 25.6666L11.6666 24.4999L14 25.6666L16.3333 24.4999L18.6666 25.6666L21 24.4999L23.3333 25.6666V2.33325L21 3.49992L18.6666 2.33325L16.3333 3.49992L14 2.33325L11.6666 3.49992L9.33329 2.33325L6.99996 3.49992L4.66663 2.33325Z"
+                 stroke="#155DFC" stroke-width="2.33333" stroke-linecap="round" stroke-linejoin="round" />
+@@ -109,7 +140,7 @@
+                     <span class="text-sm font-medium text-gray-800 truncate">
+                         {{ app.user ? app.user.companyName : 'Raison sociale' }}
+                     </span>
+-                    <span class="text-xs text-gray-400 truncate">
++                    <span class="text-xs text-gray-500 truncate">
+                         {{ app.user ? app.user.userIdentifier : 'email@exemple.fr' }}
+                     </span>
+                 </div>
+@@ -127,6 +158,12 @@
+                 </svg>
+                 Déconnexion
+             </a>
++
++            <div class="flex items-center gap-2 px-3 text-xs text-gray-500">
++                <a href="{{ path('app_terms') }}" class="hover:text-gray-600">CGU</a>
++                <span>·</span>
++                <a href="{{ path('app_privacy') }}" class="hover:text-gray-600">Confidentialité</a>
++            </div>
+         </div>
+     </aside>
+ 
+diff --git a/templates/components/PublicHeader.html.twig b/templates/components/PublicHeader.html.twig
+new file mode 100644
+index 0000000..cb2b01d
+--- /dev/null
++++ b/templates/components/PublicHeader.html.twig
+@@ -0,0 +1,12 @@
++<header class="border-b border-gray-200 bg-white">
++    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
++        <a href="{{ path('app_login') }}" class="flex items-center gap-2 font-bold text-gray-900">
++            <span class="w-8 h-8 rounded-lg bg-blue-700 text-white flex items-center justify-center text-sm">F</span>
++            {{ app_name }}
++        </a>
++        <nav class="flex items-center gap-4 text-sm text-gray-500">
++            <a href="{{ path('app_terms') }}" class="hover:text-gray-900">CGU</a>
++            <a href="{{ path('app_privacy') }}" class="hover:text-gray-900">Confidentialité</a>
++        </nav>
++    </div>
++</header>
+diff --git a/templates/dashboard/index.html.twig b/templates/dashboard/index.html.twig
+index 8727f8c..1f95635 100644
+--- a/templates/dashboard/index.html.twig
++++ b/templates/dashboard/index.html.twig
+@@ -3,14 +3,22 @@
+ {% block title %}Dashboard{% endblock %}
+ 
+ {% block body %}
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+ 
+     <twig:NavAside/>
+ 
+     <main class="flex-1 p-8 bg-[#f8fafc]">
+-        <h1 class="text-2xl font-semibold text-gray-900 mb-8">Dashboard</h1>
++        <div class="flex flex-wrap items-center justify-between gap-3 mb-8">
++            <h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
+ 
+-        <div class="grid grid-cols-4 gap-4 mb-8">
++            {# CTA principal unique de la page : toujours la même action mise en avant. #}
++            <a href="{{ path('app_invoice_new') }}"
++               class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-5 rounded-lg font-medium transition">
++                + Créer une facture
++            </a>
++        </div>
++
++        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+             <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                 <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                     <span class="text-green-600 font-bold text-lg">€</span>
+@@ -62,51 +70,38 @@
+                     <option>2025</option>
+                 </select>
+             </div>
+-            <div class="flex items-end gap-2 h-48">
+-                {% set mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'] %}
+-                {% for m in mois %}
+-                    <div class="flex flex-col items-center flex-1 gap-1">
+-                        <div class="w-full rounded-t {{ m == 'Mar' ? 'bg-blue-500 h-40' : 'bg-gray-100 h-2' }}"></div>
+-                        <span class="text-xs text-gray-400">{{ m }}</span>
+-                    </div>
+-                {% endfor %}
++            <div class="overflow-x-auto">
++                <div class="flex items-end gap-2 h-48 min-w-[560px]">
++                    {% set mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'] %}
++                    {% for m in mois %}
++                        <div class="flex flex-col items-center flex-1 gap-1">
++                            <div class="w-full rounded-t {{ m == 'Mar' ? 'bg-blue-500 h-40' : 'bg-gray-100 h-2' }}"></div>
++                            <span class="text-xs text-gray-500">{{ m }}</span>
++                        </div>
++                    {% endfor %}
++                </div>
+             </div>
+         </div>
+ 
+-        <div class="grid grid-cols-3 gap-4 mb-4">
+-            <a href="#" class="bg-blue-50 rounded-2xl border border-blue-100 p-6 flex justify-between items-start hover:bg-blue-100 transition">
+-                <div>
+-                    <p class="font-semibold text-blue-700 mb-1">Créer une facture</p>
+-                    <p class="text-sm text-blue-500">Nouvelle prestation</p>
+-                </div>
+-                <span class="text-blue-500 text-xl">→</span>
+-            </a>
+-
+-            <a href="#" class="bg-white rounded-2xl border border-gray-200 p-6 flex justify-between items-start hover:bg-gray-50 transition">
+-                <div>
+-                    <p class="font-semibold text-gray-900 mb-1">Ajouter un client</p>
+-                    <p class="text-sm text-gray-500">Gérer le répertoire</p>
+-                </div>
+-                <span class="text-gray-400 text-xl">→</span>
+-            </a>
+-
+-            <a href="#" class="bg-white rounded-2xl border border-gray-200 p-6 flex justify-between items-start hover:bg-gray-50 transition">
+-                <div>
+-                    <p class="font-semibold text-gray-900 mb-1">Créer un produit / service</p>
+-                    <p class="text-sm text-gray-500">Enrichir le catalogue pour rédiger rapidement vos factures</p>
+-                </div>
+-                <span class="text-gray-400 text-xl">→</span>
+-            </a>
+-        </div>
++        <div>
++            <h2 class="text-sm font-medium text-gray-500 mb-3">Autres actions rapides</h2>
++            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
++                <a href="{{ path('app_client_new') }}" class="bg-white rounded-2xl border border-gray-200 p-6 flex justify-between items-start hover:bg-gray-50 transition">
++                    <div>
++                        <p class="font-semibold text-gray-900 mb-1">Ajouter un client</p>
++                        <p class="text-sm text-gray-500">Gérer le répertoire</p>
++                    </div>
++                    <span class="text-gray-400 text-xl">→</span>
++                </a>
+ 
+-        <div class="grid grid-cols-3 gap-4">
+-            <a href="#" class="bg-white rounded-2xl border border-gray-200 p-6 flex justify-between items-start hover:bg-gray-50 transition">
+-                <div>
+-                    <p class="font-semibold text-gray-900 mb-1">Relancer tous les clients</p>
+-                    <p class="text-sm text-gray-500">Envoyer un mail à tous les clients en retard de paiement</p>
+-                </div>
+-                <span class="text-gray-400 text-xl">→</span>
+-            </a>
++                <a href="{{ path('app_product_new') }}" class="bg-white rounded-2xl border border-gray-200 p-6 flex justify-between items-start hover:bg-gray-50 transition">
++                    <div>
++                        <p class="font-semibold text-gray-900 mb-1">Créer un produit / service</p>
++                        <p class="text-sm text-gray-500">Enrichir le catalogue pour rédiger rapidement vos factures</p>
++                    </div>
++                    <span class="text-gray-400 text-xl">→</span>
++                </a>
++            </div>
+         </div>
+     </main>
+ </div>
+diff --git a/templates/invoice/edit.html.twig b/templates/invoice/edit.html.twig
+index 0087f4b..58e7dd4 100644
+--- a/templates/invoice/edit.html.twig
++++ b/templates/invoice/edit.html.twig
+@@ -2,7 +2,7 @@
+ {% block title %}Modifier la facture{% endblock %}
+ 
+ {% block body %}
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+     <twig:NavAside />
+     <main class="flex-1 p-8">
+ 
+diff --git a/templates/invoice/index.html.twig b/templates/invoice/index.html.twig
+index bd824ed..7a2f8ff 100644
+--- a/templates/invoice/index.html.twig
++++ b/templates/invoice/index.html.twig
+@@ -3,7 +3,7 @@
+ {% block title %}Factures{% endblock %}
+ 
+ {% block body %}
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+ 
+     <twig:NavAside />
+ 
+@@ -18,7 +18,7 @@
+         {% endfor %}
+         {% endfor %}
+ 
+-        <div class="flex items-center justify-between mb-8">
++        <div class="flex flex-wrap items-center justify-between gap-3 mb-8">
+             <h1 class="text-2xl font-semibold text-gray-900">Factures</h1>
+             <a href="{{ path('app_invoice_new') }}"
+                 class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition text-sm font-medium">
+@@ -33,7 +33,7 @@
+         </div>
+ 
+         <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+-            <div class="flex gap-2 p-4 border-b border-gray-100">
++            <div class="flex flex-wrap gap-2 p-4 border-b border-gray-100">
+ 
+                 <a href="{{ path('app_invoice_index', {status: 'all'}) }}" class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition
+            {{ filter == 'all'
+@@ -69,12 +69,13 @@
+ 
+         {% if invoices is empty %}
+         <div class="py-20 text-center">
+-            <p class="text-sm text-gray-400">Aucune facture trouvée.</p>
++            <p class="text-sm text-gray-500">Aucune facture trouvée.</p>
+             <a href="{{ path('app_invoice_new') }}" class="mt-2 inline-block text-blue-600 text-sm hover:underline">
+                 Créer votre première facture
+             </a>
+         </div>
+         {% else %}
++        <div class="overflow-x-auto">
+         <table class="w-full">
+             <thead>
+                 <tr class="border-b border-gray-100">
+@@ -150,12 +151,13 @@
+                         <div class="flex items-center justify-end gap-2">
+ 
+                             {% if invoice.status == 'draft' %}
+-                            <a href="{{ path('app_invoice_edit', {id: invoice.id}) }}" title="Modifier"
++                            <a href="{{ path('app_invoice_edit', {id: invoice.id}) }}" aria-label="Modifier la facture {{ invoice.number }}"
+                                 class="p-1.5 text-gray-400 hover:text-[#155DFC] hover:bg-blue-50 rounded-lg transition-colors">
+-                                <svg width="17" height="17" viewBox="0 0 17 17" fill="none"
++                                <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true" focusable="false"
+                                     xmlns="http://www.w3.org/2000/svg">
+-                                    <path d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.332１ 0.744853 １５．４０１ ０．７６１４６４ １５．４６６７C０．７７８０７５ １５．５３２３ ０．８１２１４１ １５．５９２２ ０．８６００４８ １５．６４C０．９０７９５５ １５．６８７９ ０．９６７９１６ １５．７２１８ １．０３３５７ １５．７３８３C１．０９９２２ １５．７５４８ １．１６８１２ １５．７５３３ １．２３２９５ １５．７３３８L４．４９７７ １４．７４３８C４．７３２５８ １４．６７２４ 
+-                                                    stroke=" currentColor" stroke-width="1.5" stroke-linecap="round"
++                                    <path
++                                        d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.3321 0.744853 15.401 0.761464 15.4667C0.778075 15.5323 0.812141 15.5922 0.860048 15.64C0.907955 15.6879 0.967916 15.7218 1.03357 15.7383C1.09922 15.7548 1.16812 15.7533 1.23295 15.7338L4.4977 14.7438C4.73258 14.6724 4.94633 14.5444 5.1202 14.371L15.1305 4.35929Z"
++                                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                         stroke-linejoin="round" />
+                                 </svg>
+                             </a>
+@@ -164,22 +166,22 @@
+                             <a href="{{ path('app_invoice_show', {id: invoice.id}) }}"
+                                 class="inline-flex items-center gap-1 text-[#155DFC] hover:text-blue-800 text-sm font-medium transition-colors">
+                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+-                                    stroke="currentColor" stroke-width="2">
++                                    stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                                     <path stroke-linecap="round" stroke-linejoin="round"
+                                         d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z" />
+                                     <path stroke-linecap="round" stroke-linejoin="round"
+                                         d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                 </svg>
+-                                Détails
++                                Détails <span class="sr-only">de la facture {{ invoice.number }}</span>
+                             </a>
+ 
+                             {% if invoice.status == 'draft' %}
+                             <form method="post" action="{{ path('app_invoice_delete', {id: invoice.id}) }}"
+                                 onsubmit="return confirm('Supprimer ce brouillon ?')">
+                                 <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ invoice.id) }}">
+-                                <button type="submit"
++                                <button type="submit" aria-label="Supprimer la facture {{ invoice.number }}"
+                                     class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+-                                    <svg width="15" height="17" viewBox="0 0 15 17" fill="none"
++                                    <svg width="15" height="17" viewBox="0 0 15 17" fill="none" aria-hidden="true" focusable="false"
+                                         xmlns="http://www.w3.org/2000/svg">
+                                         <path d="M0.75 3.75H14.25" stroke="currentColor" stroke-width="1.5"
+                                             stroke-linecap="round" stroke-linejoin="round" />
+@@ -206,8 +208,8 @@
+                 {% endfor %}
+             </tbody>
+         </table>
++        </div>
+         {% endif %}
+-</div>
+ </main>
+ </div>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/templates/invoice/new.html.twig b/templates/invoice/new.html.twig
+index 02a0ade..ffd5f96 100644
+--- a/templates/invoice/new.html.twig
++++ b/templates/invoice/new.html.twig
+@@ -3,7 +3,7 @@
+ {% block title %}Créer une facture{% endblock %}
+ 
+ {% block body %}
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+     <twig:NavAside />
+     <main class="flex-1 p-8">
+ 
+diff --git a/templates/invoice/show.html.twig b/templates/invoice/show.html.twig
+index 3170c93..f80e41d 100644
+--- a/templates/invoice/show.html.twig
++++ b/templates/invoice/show.html.twig
+@@ -82,7 +82,7 @@
+     {# Valider facture uniquement si brouillon #}
+     {% if invoice.isDraft() %}
+     <form method="post" action="{{ path('app_invoice_validate', {id: invoice.id}) }}">
+-
++        <input type="hidden" name="_token" value="{{ csrf_token('validate' ~ invoice.id) }}">
+         <button class="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm">
+             Valider la facture
+         </button>
+@@ -93,7 +93,7 @@
+     {% if invoice.isPending() %}
+     <form method="post" action="{{ path('app_invoice_paid', {id: invoice.id}) }}"
+         onsubmit="return confirm('Confirmer le paiement de cette facture ?');">
+-
++        <input type="hidden" name="_token" value="{{ csrf_token('paid' ~ invoice.id) }}">
+         <button class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm">
+             Valider le paiement
+         </button>
+diff --git a/templates/legal/privacy.html.twig b/templates/legal/privacy.html.twig
+new file mode 100644
+index 0000000..8228340
+--- /dev/null
++++ b/templates/legal/privacy.html.twig
+@@ -0,0 +1,120 @@
++{# TODO (propriétaire du site) : ce contenu est un gabarit générique conforme aux grandes
++   lignes du RGPD pour un SaaS de facturation. Faites-le relire par un juriste ou un DPO
++   avant mise en production, et complétez les variables globales dans
++   config/packages/twig.yaml (company_legal_name, company_siret, hosting_provider_name...). #}
++{% extends 'base.html.twig' %}
++
++{% block title %}Politique de confidentialité{% endblock %}
++{% block meta_description %}Politique de confidentialité de {{ app_name }} : quelles données nous collectons, pourquoi, et comment exercer vos droits RGPD.{% endblock %}
++
++{% block body %}
++<div class="min-h-screen bg-[#F9FAFB] font-sans">
++    {% include 'components/PublicHeader.html.twig' %}
++
++    <main class="max-w-3xl mx-auto px-4 py-12">
++        <h1 class="text-3xl font-bold text-gray-900 mb-2">Politique de confidentialité</h1>
++        <p class="text-sm text-gray-500 mb-10">Dernière mise à jour : {{ "now"|date("d/m/Y") }}</p>
++
++        <div class="flex flex-col gap-8 text-gray-700 leading-relaxed">
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">1. Qui sommes-nous ?</h2>
++                <p>
++                    {{ app_name }} est édité par {{ company_legal_name }} ({{ company_legal_form }}),
++                    immatriculée sous le numéro SIRET {{ company_siret }}, dont le siège social est
++                    situé {{ company_address }}. Vous pouvez nous contacter à l'adresse
++                    <a href="mailto:{{ company_email }}" class="text-blue-700 underline">{{ company_email }}</a>.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">2. Quelles données collectons-nous ?</h2>
++                <ul class="list-disc list-inside flex flex-col gap-1">
++                    <li>Données de compte : nom, prénom, adresse e-mail, mot de passe (chiffré), raison sociale.</li>
++                    <li>Données de facturation : informations sur vos clients, produits, devis et factures que vous saisissez dans l'application.</li>
++                    <li>Données techniques : adresse IP, journaux de connexion, cookies (voir section 6).</li>
++                </ul>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">3. Pourquoi collectons-nous ces données ?</h2>
++                <ul class="list-disc list-inside flex flex-col gap-1">
++                    <li>Fournir le service de facturation (création de compte, génération de factures et devis).</li>
++                    <li>Assurer la sécurité du service (prévention de la fraude, journalisation des accès).</li>
++                    <li>Vous contacter pour des raisons contractuelles ou d'assistance.</li>
++                    <li>Mesurer l'audience du site, uniquement si vous y avez consenti (voir bandeau cookies).</li>
++                </ul>
++                <p class="mt-2">
++                    La base légale de ces traitements est l'exécution du contrat qui nous lie
++                    (utilisation du service) et, pour la mesure d'audience, votre consentement.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">4. Combien de temps conservons-nous vos données ?</h2>
++                <p>
++                    Vos données de compte et de facturation sont conservées pendant toute la durée
++                    de votre utilisation du service, puis archivées conformément aux obligations
++                    légales de conservation des documents comptables (10 ans pour les factures en droit
++                    français), avant suppression définitive.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">5. Qui a accès à vos données ?</h2>
++                <p>
++                    Vos données sont hébergées chez {{ hosting_provider_name }} ({{ hosting_provider_address }}).
++                    Elles ne sont ni vendues, ni louées, ni transmises à des tiers à des fins commerciales.
++                    Elles peuvent être communiquées à nos sous-traitants techniques (hébergement, envoi
++                    d'e-mails) dans la stricte mesure nécessaire au fonctionnement du service, ou aux
++                    autorités compétentes si la loi l'exige.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">6. Cookies</h2>
++                <p>
++                    Nous utilisons un cookie strictement nécessaire au fonctionnement du service
++                    (session de connexion, protection CSRF), qui ne nécessite pas votre consentement.
++                    Avec votre accord, nous pouvons également déposer des cookies de mesure d'audience
++                    pour comprendre l'usage du site. Vous pouvez modifier votre choix à tout moment via
++                    le bandeau affiché lors de votre première visite, ou en effaçant les cookies de
++                    votre navigateur.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">7. Vos droits</h2>
++                <p>
++                    Conformément au Règlement Général sur la Protection des Données (RGPD), vous
++                    disposez d'un droit d'accès, de rectification, d'effacement, de limitation, de
++                    portabilité et d'opposition sur vos données personnelles. Vous pouvez exercer ces
++                    droits en écrivant à <a href="mailto:{{ dpo_contact }}" class="text-blue-700 underline">{{ dpo_contact }}</a>.
++                    Vous disposez également du droit d'introduire une réclamation auprès de la CNIL
++                    (<a href="https://www.cnil.fr" class="text-blue-700 underline" target="_blank" rel="noopener">www.cnil.fr</a>).
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">8. Sécurité</h2>
++                <p>
++                    Nous mettons en œuvre des mesures techniques et organisationnelles raisonnables
++                    (chiffrement des mots de passe, connexion HTTPS, contrôle d'accès par compte) pour
++                    protéger vos données contre l'accès, la modification ou la destruction non autorisés.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">9. Modifications</h2>
++                <p>
++                    Cette politique peut être mise à jour. La date de dernière modification figure en
++                    haut de cette page. Nous vous invitons à la consulter régulièrement.
++                </p>
++            </section>
++        </div>
++
++        <a href="{{ path('app_login') }}" class="inline-block mt-10 text-sm text-blue-700 underline">
++            &larr; Retour
++        </a>
++    </main>
++</div>
++{% endblock %}
+diff --git a/templates/legal/terms.html.twig b/templates/legal/terms.html.twig
+new file mode 100644
+index 0000000..1452ca6
+--- /dev/null
++++ b/templates/legal/terms.html.twig
+@@ -0,0 +1,126 @@
++{# TODO (propriétaire du site) : gabarit générique de CGU pour un SaaS de facturation.
++   Faites-le relire par un juriste avant mise en production et complétez les variables
++   globales dans config/packages/twig.yaml. #}
++{% extends 'base.html.twig' %}
++
++{% block title %}Conditions Générales d'Utilisation{% endblock %}
++{% block meta_description %}Conditions générales d'utilisation du service {{ app_name }}.{% endblock %}
++
++{% block body %}
++<div class="min-h-screen bg-[#F9FAFB] font-sans">
++    {% include 'components/PublicHeader.html.twig' %}
++
++    <main class="max-w-3xl mx-auto px-4 py-12">
++        <h1 class="text-3xl font-bold text-gray-900 mb-2">Conditions Générales d'Utilisation</h1>
++        <p class="text-sm text-gray-500 mb-10">Dernière mise à jour : {{ "now"|date("d/m/Y") }}</p>
++
++        <div class="flex flex-col gap-8 text-gray-700 leading-relaxed">
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">1. Objet</h2>
++                <p>
++                    Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et
++                    l'utilisation du service {{ app_name }}, une application de facturation en ligne
++                    éditée par {{ company_legal_name }} ({{ company_legal_form }}), SIRET {{ company_siret }},
++                    dont le siège social est {{ company_address }}. En créant un compte, l'utilisateur
++                    accepte sans réserve les présentes CGU.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">2. Description du service</h2>
++                <p>
++                    {{ app_name }} permet à ses utilisateurs de créer et gérer des clients, des produits,
++                    des devis et des factures. Le service est accessible sur abonnement ou selon les
++                    conditions tarifaires en vigueur au moment de l'inscription.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">3. Compte utilisateur</h2>
++                <ul class="list-disc list-inside flex flex-col gap-1">
++                    <li>L'utilisateur garantit l'exactitude des informations fournies lors de l'inscription.</li>
++                    <li>L'utilisateur est seul responsable de la confidentialité de ses identifiants de connexion.</li>
++                    <li>Toute activité effectuée depuis un compte est présumée réalisée par son titulaire.</li>
++                </ul>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">4. Obligations de l'utilisateur</h2>
++                <p>L'utilisateur s'engage à :</p>
++                <ul class="list-disc list-inside flex flex-col gap-1">
++                    <li>Utiliser le service conformément à sa destination et à la réglementation en vigueur.</li>
++                    <li>Ne pas tenter de contourner les mesures de sécurité du service.</li>
++                    <li>Ne pas utiliser le service à des fins frauduleuses, notamment l'émission de fausses factures.</li>
++                    <li>Assurer lui-même la conformité fiscale et comptable des documents qu'il émet via le service.</li>
++                </ul>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">5. Disponibilité du service</h2>
++                <p>
++                    {{ company_legal_name }} met en œuvre les moyens raisonnables pour assurer un accès
++                    continu au service, sans garantie de disponibilité absolue. Des interruptions
++                    peuvent survenir pour maintenance, mise à jour, ou en cas de force majeure.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">6. Propriété intellectuelle</h2>
++                <p>
++                    Le service, son code, son design et sa marque restent la propriété exclusive de
++                    {{ company_legal_name }}. Les données saisies par l'utilisateur (clients, factures,
++                    produits) restent sa propriété exclusive.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">7. Responsabilité</h2>
++                <p>
++                    {{ company_legal_name }} ne saurait être tenue responsable des dommages indirects
++                    résultant de l'utilisation du service, ni du contenu des factures, devis ou
++                    informations clients saisis par l'utilisateur, dont il conserve l'entière
++                    responsabilité.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">8. Résiliation</h2>
++                <p>
++                    L'utilisateur peut supprimer son compte à tout moment. {{ company_legal_name }} se
++                    réserve le droit de suspendre ou résilier un compte en cas de manquement grave aux
++                    présentes CGU, après notification préalable lorsque cela est possible.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">9. Données personnelles</h2>
++                <p>
++                    Le traitement des données personnelles est décrit dans notre
++                    <a href="{{ path('app_privacy') }}" class="text-blue-700 underline">politique de confidentialité</a>.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">10. Modification des CGU</h2>
++                <p>
++                    {{ company_legal_name }} peut modifier les présentes CGU à tout moment. Les
++                    utilisateurs seront informés de tout changement substantiel. La poursuite de
++                    l'utilisation du service après modification vaut acceptation des nouvelles CGU.
++                </p>
++            </section>
++
++            <section>
++                <h2 class="text-xl font-semibold text-gray-900 mb-2">11. Droit applicable</h2>
++                <p>
++                    Les présentes CGU sont soumises au droit français. Tout litige relève de la
++                    compétence des tribunaux français.
++                </p>
++            </section>
++        </div>
++
++        <a href="{{ path('app_login') }}" class="inline-block mt-10 text-sm text-blue-700 underline">
++            &larr; Retour
++        </a>
++    </main>
++</div>
++{% endblock %}
+diff --git a/templates/product/_form.html.twig b/templates/product/_form.html.twig
+index ba574e9..f0ca6cd 100644
+--- a/templates/product/_form.html.twig
++++ b/templates/product/_form.html.twig
+@@ -19,6 +19,7 @@
+         class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+         placeholder: 'Ex : Développement web'
+     }}) }}
++    <p class="mt-1 text-sm text-red-600">{{ form_errors(form.name) }}</p>
+ </div>
+ 
+ <div>
+@@ -31,6 +32,7 @@
+         placeholder: 'Décrivez votre produit ou service',
+         rows: 3
+     }}) }}
++    <p class="mt-1 text-sm text-red-600">{{ form_errors(form.description) }}</p>
+ </div>
+ 
+ <div class="grid grid-cols-2 gap-4">
+@@ -40,12 +42,14 @@
+             class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+             placeholder: '0.00'
+         }}) }}
++    <p class="mt-1 text-sm text-red-600">{{ form_errors(form.price) }}</p>
+     </div>
+     <div>
+         <label class="block text-sm font-medium text-gray-600 mb-1.5">Unité</label>
+         {{ form_widget(form.unit, {attr: {
+             class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+         }}) }}
++    <p class="mt-1 text-sm text-red-600">{{ form_errors(form.unit) }}</p>
+     </div>
+ </div>
+ 
+diff --git a/templates/product/_row_actions.html.twig b/templates/product/_row_actions.html.twig
+new file mode 100644
+index 0000000..deb0df5
+--- /dev/null
++++ b/templates/product/_row_actions.html.twig
+@@ -0,0 +1,42 @@
++{# Attend une variable `product` dans le contexte. #}
++<a href="{{ path('app_product_show', {'id': product.id}) }}"
++   aria-label="Voir le produit {{ product.name }}"><svg width="17" height="17"
++        aria-hidden="true" focusable="false"
++        xmlns="http://www.w3.org/2000/svg"
++        viewBox="0 0 576 512"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
++        <path fill="rgb(0, 97, 95)"
++            d="M288 80C222.8 80 169.2 109.6 128.1 147.7 89.6 183.5 63 226 49.4 256 63 286 89.6 328.5 128.1 364.3 169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.4 328.5 513 286 526.6 256 513 226 486.4 183.5 447.9 147.7 406.8 109.6 353.2 80 288 80zM95.4 112.6C142.5 68.8 207.2 32 288 32s145.5 36.8 192.6 80.6c46.8 43.5 78.1 95.4 93 131.1 3.3 7.9 3.3 16.7 0 24.6-14.9 35.7-46.2 87.7-93 131.1-47.1 43.7-111.8 80.6-192.6 80.6S142.5 443.2 95.4 399.4c-46.8-43.5-78.1-95.4-93-131.1-3.3-7.9-3.3-16.7 0-24.6 14.9-35.7 46.2-87.7 93-131.1zM288 336c44.2 0 80-35.8 80-80 0-29.6-16.1-55.5-40-69.3-1.4 59.7-49.6 107.9-109.3 109.3 13.8 23.9 39.7 40 69.3 40zm-79.6-88.4c2.5 .3 5 .4 7.6 .4 35.3 0 64-28.7 64-64 0-2.6-.2-5.1-.4-7.6-37.4 3.9-67.2 33.7-71.1 71.1zm45.6-115c10.8-3 22.2-4.5 33.9-4.5 8.8 0 17.5 .9 25.8 2.6 .3 .1 .5 .1 .8 .2 57.9 12.2 101.4 63.7 101.4 125.2 0 70.7-57.3 128-128 128-61.6 0-113-43.5-125.2-101.4-1.8-8.6-2.8-17.5-2.8-26.6 0-11 1.4-21.8 4-32 .2-.7 .3-1.3 .5-1.9 11.9-43.4 46.1-77.6 89.5-89.5z" />
++    </svg></a>
++<a href="{{ path('app_product_edit', {'id': product.id}) }}"
++   aria-label="Modifier le produit {{ product.name }}"><svg width="17" height="17"
++        aria-hidden="true" focusable="false"
++        viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
++        <path
++            d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.3321 0.744853 15.401 0.761464 15.4667C0.778075 15.5323 0.812141 15.5922 0.860048 15.64C0.907955 15.6879 0.967916 15.7218 1.03357 15.7383C1.09922 15.7548 1.16812 15.7533 1.23295 15.7338L4.4977 14.7438C4.73258 14.6724 4.94633 14.5444 5.1202 14.371L15.1305 4.35929Z"
++            stroke="#155DFC" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++    </svg>
++</a>
++<form method="post" action="{{ path('app_product_delete', {'id': product.id}) }}"
++      onsubmit="return confirm('Supprimer ce produit ?');">
++    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ product.id) }}">
++    <button type="submit" aria-label="Supprimer le produit {{ product.name }}"
++            class="bg-transparent border-0 p-0 cursor-pointer">
++        <svg width="15" height="17" aria-hidden="true" focusable="false" viewBox="0 0 15 17" fill="none"
++            xmlns="http://www.w3.org/2000/svg">
++        <path d="M0.75 3.75H14.25" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++        <path
++            d="M12.75 3.75V14.25C12.75 15 12 15.75 11.25 15.75H3.75C3 15.75 2.25 15 2.25 14.25V3.75"
++            stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++        <path d="M4.5 3.75V2.25C4.5 1.5 5.25 0.75 6 0.75H9C9.75 0.75 10.5 1.5 10.5 2.25V3.75"
++            stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++        <path d="M6 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++        <path d="M9 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
++            stroke-linejoin="round" />
++    </svg>
++    </button>
++</form>
+diff --git a/templates/product/edit.html.twig b/templates/product/edit.html.twig
+index d233e96..6a59c68 100644
+--- a/templates/product/edit.html.twig
++++ b/templates/product/edit.html.twig
+@@ -3,7 +3,7 @@
+ {% block title %}Modifier le produit{% endblock %}
+ 
+ {% block body %}
+-<div class="min-h-screen flex bg-[#F9FAFB]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#F9FAFB]">
+ 
+     <twig:NavAside />
+ 
+diff --git a/templates/product/index.html.twig b/templates/product/index.html.twig
+index 96cb4fc..bfaf53c 100644
+--- a/templates/product/index.html.twig
++++ b/templates/product/index.html.twig
+@@ -4,12 +4,12 @@
+ 
+ {% block body %}
+ 
+-<div class="min-h-screen flex bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+  
+     <twig:NavAside/>
+ 
+     <main class="flex-1 p-8 bg-[#f8fafc]">
+-        <div class="flex flex-row justify-between">
++        <div class="flex flex-row flex-wrap justify-between gap-3">
+             <h1 class="text-2xl font-semibold text-gray-900 mb-8">Produits & Services</h1>
+             <a class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition"
+                 href="{{ path('app_product_new') }}">
+@@ -24,7 +24,7 @@
+             </a>
+         </div>
+ 
+-        <div class="flex flex-col justify-center items-center">
++        <div class="overflow-x-auto">
+         <table class="table border-collapse border border-gray-200 ">
+             <thead>
+                 <tr>
+@@ -45,37 +45,7 @@
+                     <td >{{ product.price }}</td>
+                     <td >{{ product.unit.value}}</td>
+                     <td class="flex flex-row gap-2">
+-                        <a href="{{ path('app_product_show', {'id': product.id}) }}"><svg width="17" height="17"
+-                                xmlns="http://www.w3.org/2000/svg"
+-                                viewBox="0 0 576 512"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+-                                <path fill="rgb(0, 97, 95)"
+-                                    d="M288 80C222.8 80 169.2 109.6 128.1 147.7 89.6 183.5 63 226 49.4 256 63 286 89.6 328.5 128.1 364.3 169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.4 328.5 513 286 526.6 256 513 226 486.4 183.5 447.9 147.7 406.8 109.6 353.2 80 288 80zM95.4 112.6C142.5 68.8 207.2 32 288 32s145.5 36.8 192.6 80.6c46.8 43.5 78.1 95.4 93 131.1 3.3 7.9 3.3 16.7 0 24.6-14.9 35.7-46.2 87.7-93 131.1-47.1 43.7-111.8 80.6-192.6 80.6S142.5 443.2 95.4 399.4c-46.8-43.5-78.1-95.4-93-131.1-3.3-7.9-3.3-16.7 0-24.6 14.9-35.7 46.2-87.7 93-131.1zM288 336c44.2 0 80-35.8 80-80 0-29.6-16.1-55.5-40-69.3-1.4 59.7-49.6 107.9-109.3 109.3 13.8 23.9 39.7 40 69.3 40zm-79.6-88.4c2.5 .3 5 .4 7.6 .4 35.3 0 64-28.7 64-64 0-2.6-.2-5.1-.4-7.6-37.4 3.9-67.2 33.7-71.1 71.1zm45.6-115c10.8-3 22.2-4.5 33.9-4.5 8.8 0 17.5 .9 25.8 2.6 .3 .1 .5 .1 .8 .2 57.9 12.2 101.4 63.7 101.4 125.2 0 70.7-57.3 128-128 128-61.6 0-113-43.5-125.2-101.4-1.8-8.6-2.8-17.5-2.8-26.6 0-11 1.4-21.8 4-32 .2-.7 .3-1.3 .5-1.9 11.9-43.4 46.1-77.6 89.5-89.5z" />
+-                            </svg></a>
+-                        <a href="{{ path('app_product_edit', {'id': product.id}) }}"><svg width="17" height="17"
+-                                viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+-                                <path
+-                                    d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.3321 0.744853 15.401 0.761464 15.4667C0.778075 15.5323 0.812141 15.5922 0.860048 15.64C0.907955 15.6879 0.967916 15.7218 1.03357 15.7383C1.09922 15.7548 1.16812 15.7533 1.23295 15.7338L4.4977 14.7438C4.73258 14.6724 4.94633 14.5444 5.1202 14.371L15.1305 4.35929Z"
+-                                    stroke="#155DFC" stroke-width="1.5" stroke-linecap="round"
+-                                    stroke-linejoin="round" />
+-                            </svg>
+-                        </a>
+-                        <a href="{{ path('app_product_delete', {'id': product.id}) }}"><svg width="15" height="17" viewBox="0 0 15 17" fill="none"
+-                                xmlns="http://www.w3.org/2000/svg">
+-                                <path d="M0.75 3.75H14.25" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                    stroke-linejoin="round" />
+-                                <path
+-                                    d="M12.75 3.75V14.25C12.75 15 12 15.75 11.25 15.75H3.75C3 15.75 2.25 15 2.25 14.25V3.75"
+-                                    stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                    stroke-linejoin="round" />
+-                                <path d="M4.5 3.75V2.25C4.5 1.5 5.25 0.75 6 0.75H9C9.75 0.75 10.5 1.5 10.5 2.25V3.75"
+-                                    stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                    stroke-linejoin="round" />
+-                                <path d="M6 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                    stroke-linejoin="round" />
+-                                <path d="M9 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                    stroke-linejoin="round" />
+-                            </svg>
+-                        </a>
++                        {{ include('product/_row_actions.html.twig', {product: product}) }}
+                     </td>
+                 </tr>
+                 {% else %}
+diff --git a/templates/product/new.html.twig b/templates/product/new.html.twig
+index 92c2a0e..f88e7cc 100644
+--- a/templates/product/new.html.twig
++++ b/templates/product/new.html.twig
+@@ -3,7 +3,7 @@
+ {% block title %}Nouveau produit{% endblock %}
+ 
+ {% block body %}
+-<div class="min-h-screen flex bg-[#F9FAFB]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#F9FAFB]">
+ 
+     <twig:NavAside />
+ 
+@@ -56,38 +56,7 @@
+                             <td class="p-4">{{ product.unit.value }}</td>
+ 
+                             <td class="p-4 flex gap-3">
+-                                <a href="{{ path('app_product_show', {'id': product.id}) }}"><svg width="17" height="17"
+-                                        xmlns="http://www.w3.org/2000/svg"
+-                                        viewBox="0 0 576 512"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+-                                        <path fill="rgb(0, 97, 95)"
+-                                            d="M288 80C222.8 80 169.2 109.6 128.1 147.7 89.6 183.5 63 226 49.4 256 63 286 89.6 328.5 128.1 364.3 169.2 402.4 222.8 432 288 432s118.8-29.6 159.9-67.7C486.4 328.5 513 286 526.6 256 513 226 486.4 183.5 447.9 147.7 406.8 109.6 353.2 80 288 80zM95.4 112.6C142.5 68.8 207.2 32 288 32s145.5 36.8 192.6 80.6c46.8 43.5 78.1 95.4 93 131.1 3.3 7.9 3.3 16.7 0 24.6-14.9 35.7-46.2 87.7-93 131.1-47.1 43.7-111.8 80.6-192.6 80.6S142.5 443.2 95.4 399.4c-46.8-43.5-78.1-95.4-93-131.1-3.3-7.9-3.3-16.7 0-24.6 14.9-35.7 46.2-87.7 93-131.1zM288 336c44.2 0 80-35.8 80-80 0-29.6-16.1-55.5-40-69.3-1.4 59.7-49.6 107.9-109.3 109.3 13.8 23.9 39.7 40 69.3 40zm-79.6-88.4c2.5 .3 5 .4 7.6 .4 35.3 0 64-28.7 64-64 0-2.6-.2-5.1-.4-7.6-37.4 3.9-67.2 33.7-71.1 71.1zm45.6-115c10.8-3 22.2-4.5 33.9-4.5 8.8 0 17.5 .9 25.8 2.6 .3 .1 .5 .1 .8 .2 57.9 12.2 101.4 63.7 101.4 125.2 0 70.7-57.3 128-128 128-61.6 0-113-43.5-125.2-101.4-1.8-8.6-2.8-17.5-2.8-26.6 0-11 1.4-21.8 4-32 .2-.7 .3-1.3 .5-1.9 11.9-43.4 46.1-77.6 89.5-89.5z" />
+-                                    </svg></a>
+-                                <a href="{{ path('app_product_edit', {'id': product.id}) }}"><svg width="17" height="17"
+-                                        viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+-                                        <path
+-                                            d="M15.1305 4.35929C15.527 3.96285 15.7498 3.42514 15.7499 2.86443C15.7499 2.30372 15.5273 1.76594 15.1308 1.36941C14.7344 0.972879 14.1967 0.75007 13.636 0.75C13.0753 0.74993 12.5375 0.972604 12.141 1.36904L2.13145 11.3808C1.95732 11.5544 1.82854 11.7682 1.75645 12.0033L0.765701 15.2673C0.746317 15.3321 0.744853 15.401 0.761464 15.4667C0.778075 15.5323 0.812141 15.5922 0.860048 15.64C0.907955 15.6879 0.967916 15.7218 1.03357 15.7383C1.09922 15.7548 1.16812 15.7533 1.23295 15.7338L4.4977 14.7438C4.73258 14.6724 4.94633 14.5444 5.1202 14.371L15.1305 4.35929Z"
+-                                            stroke="#155DFC" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                    </svg>
+-                                </a>
+-                                <a href="{{ path('app_product_delete', {'id': product.id}) }}"><svg width="15"
+-                                        height="17" viewBox="0 0 15 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+-                                        <path d="M0.75 3.75H14.25" stroke="#E7000B" stroke-width="1.5"
+-                                            stroke-linecap="round" stroke-linejoin="round" />
+-                                        <path
+-                                            d="M12.75 3.75V14.25C12.75 15 12 15.75 11.25 15.75H3.75C3 15.75 2.25 15 2.25 14.25V3.75"
+-                                            stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                        <path
+-                                            d="M4.5 3.75V2.25C4.5 1.5 5.25 0.75 6 0.75H9C9.75 0.75 10.5 1.5 10.5 2.25V3.75"
+-                                            stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                        <path d="M6 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                        <path d="M9 7.5V12" stroke="#E7000B" stroke-width="1.5" stroke-linecap="round"
+-                                            stroke-linejoin="round" />
+-                                    </svg>
+-                                </a>
++                                {{ include('product/_row_actions.html.twig', {product: product}) }}
+                             </td>
+                         </tr>
+                         {% else %}
+diff --git a/templates/product/show.html.twig b/templates/product/show.html.twig
+index b413a0a..2ee5950 100644
+--- a/templates/product/show.html.twig
++++ b/templates/product/show.html.twig
+@@ -3,7 +3,7 @@
+ {% block title %}Détail du produit{% endblock %}
+ 
+ {% block body %}
+-<div class="min-h-screen flex bg-[#F9FAFB]">
++<div class="min-h-screen flex flex-col md:flex-row bg-[#F9FAFB]">
+ 
+     <twig:NavAside />
+ 
+diff --git a/templates/registration/register.html.twig b/templates/registration/register.html.twig
+index cbc374b..25f1195 100644
+--- a/templates/registration/register.html.twig
++++ b/templates/registration/register.html.twig
+@@ -1,11 +1,12 @@
+ {% extends 'base.html.twig' %}
+ 
+ {% block title %}Inscription{% endblock %}
++{% block meta_description %}Créez gratuitement votre compte {{ app_name }} et commencez à facturer vos clients en quelques minutes.{% endblock %}
+ 
+ {% block body %}
+ 
+-<body class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen">
+-    <header class="flex flex-col justify-center items-center gap-2 mb-5">
++<div class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen px-4">
++    <header class="flex flex-col justify-center items-center gap-2 mb-5 w-full max-w-[480px]">
+         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+             <path d="M8 4V44L12 42L16 44L20 42L24 44L28 42L32 44L36 42L40 44V4L36 6L32 4L28 6L24 4L20 6L16 4L12 6L8 4Z"
+                 stroke="#155DFC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+@@ -19,10 +20,12 @@
+         </p>
+     </header>
+ 
+-    <main class="rounded-lg shadow-md bg-white w-[480px] mb-5">
++    <main class="rounded-lg shadow-md bg-white w-full max-w-[480px] mb-5">
+ 
+         {{ form_start(registrationForm, {'attr': {'class': 'flex flex-col gap-2 p-6'}}) }}
+ 
++        {{ form_widget(registrationForm.website) }}
++
+         <div class="mb-5">
+             <div class="flex flex-col gap-2">
+                 <label class="block mb-2.5 text-sm font-medium text-heading">Prénom</label>
+@@ -31,12 +34,14 @@
+                 {{form_widget(registrationForm.firstName, {'attr': {'class': 'border border-gray-300 rounded-sm block
+                 w-full px-6
+                 py-4 text-sm', 'placeholder': 'Jean'}})}}
++                <p class="mt-1 text-sm text-red-600">{{ form_errors(registrationForm.firstName) }}</p>
+ 
+ 
+                 {{form_widget(registrationForm.lastName, {'attr': {'class': 'border border-gray-300 rounded-sm block
+                 w-full
+                 px-6
+                 py-4 text-sm', 'placeholder': 'Dupont'}})}}
++                <p class="mt-1 text-sm text-red-600">{{ form_errors(registrationForm.lastName) }}</p>
+             </div>
+         </div>
+ 
+@@ -47,6 +52,7 @@
+             w-full
+             px-6
+             py-4 text-sm', 'placeholder': 'Tech Solutions'}})}}
++                <p class="mt-1 text-sm text-red-600">{{ form_errors(registrationForm.companyName) }}</p>
+         </div>
+ 
+         <div class="mb-5">
+@@ -54,6 +60,7 @@
+             {{ form_widget(registrationForm.iban, {'attr': {'class': 'border border-gray-300 rounded-sm block w-full
+             px-6
+             py-4 text-sm', 'placeholder': 'FR76 XXXX XXXX XXXX XXXX XXXX XXX'}}) }}
++                <p class="mt-1 text-sm text-red-600">{{ form_errors(registrationForm.iban) }}</p>
+         </div>
+ 
+         <div class="mb-5">
+@@ -61,6 +68,7 @@
+             {{ form_widget(registrationForm.email, {'attr': {'class': 'border border-gray-300 rounded-sm block w-full
+             px-6
+             py-4 text-sm', 'placeholder': 'contact@entreprise.fr'}}) }}
++                <p class="mt-1 text-sm text-red-600">{{ form_errors(registrationForm.email) }}</p>
+         </div>
+ 
+ 
+@@ -68,15 +76,20 @@
+             <label class="block mb-2.5 text-sm font-medium text-heading">Mot de passe</label>
+             {{ form_widget(registrationForm.plainPassword, {'attr': {'class': 'border border-gray-300 rounded-sm block
+             w-full px-6 py-4 text-sm', 'placeholder': '••••••••'}}) }}
++                <p class="mt-1 text-sm text-red-600">{{ form_errors(registrationForm.plainPassword) }}</p>
+         </div>
+         <div class="mb-5 flex justify-center items-center gap-3">
+             {{ form_widget(registrationForm.agreeTerms, {
+             'attr': {'class': 'w-4 h-4 border border-gray-300 rounded-sm cursor-pointer'}
+             }) }}
+             <label class="text-sm font-medium text-heading cursor-pointer">
+-                Accepter les conditions
++                J'accepte les
++                <a href="{{ path('app_terms') }}" target="_blank" class="text-blue-700 underline">CGU</a>
++                et la
++                <a href="{{ path('app_privacy') }}" target="_blank" class="text-blue-700 underline">politique de confidentialité</a>
+             </label>
+         </div>
++        <p class="-mt-3 text-sm text-red-600 text-center">{{ form_errors(registrationForm.agreeTerms) }}</p>
+ 
+         <button type="submit"
+             class="w-full text-white bg-brand border border-transparent hover:bg-brand-strong font-medium rounded-base text-sm px-4 py-2.5">
+@@ -86,5 +99,5 @@
+         {{ form_end(registrationForm) }}
+ 
+     </main>
+-</body>
++</div>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/templates/security/login.html.twig b/templates/security/login.html.twig
+index 7a6c246..a507060 100644
+--- a/templates/security/login.html.twig
++++ b/templates/security/login.html.twig
+@@ -1,10 +1,11 @@
+ {% extends 'base.html.twig' %}
+ 
+ {% block title %}Connexion{% endblock %}
++{% block meta_description %}Connectez-vous à votre espace {{ app_name }} pour gérer vos clients, vos factures et vos devis.{% endblock %}
+ 
+ {% block body %}
+-<body class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen">
+-<div class="flex flex-col justify-center items-center gap-4 mt-10">
++<div class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen px-4">
++<div class="flex flex-col justify-center items-center gap-4 mt-10 w-full max-w-[480px]">
+ 
+     <header class="flex flex-col justify-center items-center gap-2 mb-5">
+         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+@@ -16,7 +17,7 @@
+         <p>Ou <a href="{{ path('app_register') }}" class="font-medium text-[#155DFC] hover:underline">créez un compte gratuitement</a></p>
+     </header>
+ 
+-    <main class="w-[480px] shadow-md bg-white rounded-sm">
++    <main class="w-full shadow-md bg-white rounded-sm">
+ 
+         {% if app.user %}
+             <div class="p-6 text-sm text-heading">
+@@ -58,6 +59,13 @@
+ 
+     </main>
+ 
++    <p class="text-xs text-gray-500 text-center">
++        En vous connectant, vous acceptez nos
++        <a href="{{ path('app_terms') }}" class="underline hover:text-gray-600">CGU</a>
++        et notre
++        <a href="{{ path('app_privacy') }}" class="underline hover:text-gray-600">politique de confidentialité</a>.
++    </p>
++
++</div>
+ </div>
+-</body>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/templates/security/logout.html.twig b/templates/security/logout.html.twig
+index 7002c78..e69a283 100644
+--- a/templates/security/logout.html.twig
++++ b/templates/security/logout.html.twig
+@@ -3,7 +3,7 @@
+ {% block title %}Déconnexion{% endblock %}
+ 
+ {% block body %}
+-<body class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen">
++<div class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen">
+ <div
+     class="flex flex-col justify-center items-center  bg-white p-8 rounded-lg shadow-md w-full max-w-sm text-center gap-5">
+     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+@@ -22,5 +22,5 @@
+         </a>
+     </div>
+ </div>
+-</body>
++</div>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/templates/security/profile.html.twig b/templates/security/profile.html.twig
+index 50da62f..d1d43d6 100644
+--- a/templates/security/profile.html.twig
++++ b/templates/security/profile.html.twig
+@@ -3,7 +3,7 @@
+ {% block title %}Profil{% endblock %}
+ 
+ {% block body %}
+-<div class="min-h-screen flex  gap-6 bg-[#f8fafc]">
++<div class="min-h-screen flex flex-col md:flex-row gap-6 bg-[#f8fafc]">
+     <twig:NavAside />
+ 
+     <main class="flex-1 p-8 bg-[#f8fafc]">
+@@ -21,6 +21,7 @@
+                     {{form_widget(registrationForm.companyName, {'attr': {'class': 'w-full rounded-2xl border
+                     border-gray-200 bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2
+                     focus:ring-[#030213]/20', 'placeholder': 'Entrez la raison sociale'}})}}
++                    <p class="text-sm text-red-600">{{ form_errors(registrationForm.companyName) }}</p>
+ 
+                 </div>
+ 
+@@ -30,6 +31,7 @@
+                     {{form_widget(registrationForm.siret, {'attr': {'class': 'w-full rounded-2xl border
+                     border-gray-200 bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2
+                     focus:ring-[#030213]/20', 'placeholder': '123 456 789 00000'}})}}
++                    <p class="text-sm text-red-600">{{ form_errors(registrationForm.siret) }}</p>
+ 
+                 </div>
+ 
+@@ -38,6 +40,7 @@
+                     {{ form_widget(registrationForm.iban, {'attr': {'class': 'w-full rounded-2xl border border-gray-200
+                     bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2
+                     focus:ring-[#030213]/20', 'placeholder': 'FR76 1234 5678 9012 3456 7890 123'}}) }}
++                    <p class="text-sm text-red-600">{{ form_errors(registrationForm.iban) }}</p>
+                     <p class="text-xs text-[#030213]/70">Compte bancaire qui recevra les virements de vos clients.</p>
+                 </div>
+ 
+diff --git a/templates/user/index.html.twig b/templates/user/index.html.twig
+index a4b3a76..a79b564 100644
+--- a/templates/user/index.html.twig
++++ b/templates/user/index.html.twig
+@@ -3,7 +3,7 @@
+ {% block title %}User{% endblock %}
+ 
+ {% block body %}
+-<body class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen">
++<div class="bg-[#F9FAFB] font-sans flex flex-col justify-center items-center gap-8 min-h-screen px-4">
+    <!-- <div class="flex flex-col justify-center items-center gap-4 mt-10">
+     <header class="flex flex-col justify-center items-center gap-2 mb-5">
+        
+@@ -21,7 +21,7 @@
+     </header>
+ 
+ 
+-   <main class=" w-[480px] shadow-md  bg-white  rounded-sm">
++   <main class="w-full max-w-[480px] shadow-md  bg-white  rounded-sm">
+   
+     <form class="flex flex-col justify-center items-center p-6 gap-4 mb-5">
+         <div class="mb-5  flex flex-col justify-start items-start gap-2">
+@@ -45,7 +45,7 @@
+ </div> -->
+ 
+ 
+-</body>
++</div>
+ 
+ 
+ 

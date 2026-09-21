@@ -10,9 +10,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Sensiolabs\GotenbergBundle\GotenbergPdfInterface;
 
 #[Route('/invoice')]
+#[IsGranted('ROLE_USER')]
 final class InvoiceController extends AbstractController
 {
 
@@ -67,10 +69,14 @@ final class InvoiceController extends AbstractController
         ]);
     }
     #[Route('/{id}/validate', name: 'app_invoice_validate', methods: ['POST'])]
-    public function validate(Invoice $invoice, EntityManagerInterface $entityManager): Response
+    public function validate(Request $request, Invoice $invoice, EntityManagerInterface $entityManager): Response
     {
         if ($invoice->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
+        }
+
+        if (!$this->isCsrfTokenValid('validate' . $invoice->getId(), $request->getPayload()->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
         if ($invoice->isDraft()) {
@@ -83,10 +89,14 @@ final class InvoiceController extends AbstractController
     }
 
     #[Route('/{id}/paid', name: 'app_invoice_paid', methods: ['POST'])]
-    public function markAsPaid(Invoice $invoice, EntityManagerInterface $entityManager): Response
+    public function markAsPaid(Request $request, Invoice $invoice, EntityManagerInterface $entityManager): Response
     {
         if ($invoice->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
+        }
+
+        if (!$this->isCsrfTokenValid('paid' . $invoice->getId(), $request->getPayload()->getString('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
         if ($invoice->isPending()) {

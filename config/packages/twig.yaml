@@ -1,5 +1,26 @@
 twig:
     file_name_pattern: '*.twig'
+    globals:
+        # TODO: à personnaliser une fois pour toutes avec votre vraie marque.
+        app_name: 'FacturSaas'
+        app_description: 'FacturSaas, le logiciel de facturation simple pour indépendants et petites entreprises : devis, factures et suivi client en un seul endroit.'
+        app_theme_color: '#1D4ED8'
+
+        # TODO: informations légales réelles à renseigner avant mise en production
+        # (nécessaires pour les CGU et la politique de confidentialité).
+        company_legal_name: '[Raison sociale à compléter]'
+        company_legal_form: '[Forme juridique, ex. SASU]'
+        company_siret: '[Numéro SIRET à compléter]'
+        company_address: '[Adresse du siège social à compléter]'
+        company_email: 'contact@factursaas.example'
+        company_publication_director: '[Nom du directeur de la publication]'
+        hosting_provider_name: '[Nom de l’hébergeur, ex. OVHcloud / Scaleway]'
+        hosting_provider_address: '[Adresse de l’hébergeur]'
+        dpo_contact: 'dpo@factursaas.example'
+
+        # Vide par défaut : l'analytics reste désactivé tant que la variable
+        # d'environnement GA_MEASUREMENT_ID n'est pas renseignée.
+        ga_measurement_id: '%env(GA_MEASUREMENT_ID)%'
 
 when@test:
     twig:

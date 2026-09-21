@@ -19,6 +19,7 @@
         class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
         placeholder: 'Ex : Développement web'
     }}) }}
+    <p class="mt-1 text-sm text-red-600">{{ form_errors(form.name) }}</p>
 </div>
 
 <div>
@@ -31,6 +32,7 @@
         placeholder: 'Décrivez votre produit ou service',
         rows: 3
     }}) }}
+    <p class="mt-1 text-sm text-red-600">{{ form_errors(form.description) }}</p>
 </div>
 
 <div class="grid grid-cols-2 gap-4">
@@ -40,12 +42,14 @@
             class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
             placeholder: '0.00'
         }}) }}
+    <p class="mt-1 text-sm text-red-600">{{ form_errors(form.price) }}</p>
     </div>
     <div>
         <label class="block text-sm font-medium text-gray-600 mb-1.5">Unité</label>
         {{ form_widget(form.unit, {attr: {
             class: 'w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
         }}) }}
+    <p class="mt-1 text-sm text-red-600">{{ form_errors(form.unit) }}</p>
     </div>
 </div>
 

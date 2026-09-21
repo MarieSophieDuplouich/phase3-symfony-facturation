@@ -3,7 +3,7 @@
 {% block title %}Profil{% endblock %}
 
 {% block body %}
-<div class="min-h-screen flex  gap-6 bg-[#f8fafc]">
+<div class="min-h-screen flex flex-col md:flex-row gap-6 bg-[#f8fafc]">
     <twig:NavAside />
 
     <main class="flex-1 p-8 bg-[#f8fafc]">
@@ -21,6 +21,7 @@
                     {{form_widget(registrationForm.companyName, {'attr': {'class': 'w-full rounded-2xl border
                     border-gray-200 bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2
                     focus:ring-[#030213]/20', 'placeholder': 'Entrez la raison sociale'}})}}
+                    <p class="text-sm text-red-600">{{ form_errors(registrationForm.companyName) }}</p>
 
                 </div>
 
@@ -30,6 +31,7 @@
                     {{form_widget(registrationForm.siret, {'attr': {'class': 'w-full rounded-2xl border
                     border-gray-200 bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2
                     focus:ring-[#030213]/20', 'placeholder': '123 456 789 00000'}})}}
+                    <p class="text-sm text-red-600">{{ form_errors(registrationForm.siret) }}</p>
 
                 </div>
 
@@ -38,6 +40,7 @@
                     {{ form_widget(registrationForm.iban, {'attr': {'class': 'w-full rounded-2xl border border-gray-200
                     bg-[#f8fafc] px-4 py-3 text-sm text-[#030213] focus:outline-none focus:ring-2
                     focus:ring-[#030213]/20', 'placeholder': 'FR76 1234 5678 9012 3456 7890 123'}}) }}
+                    <p class="text-sm text-red-600">{{ form_errors(registrationForm.iban) }}</p>
                     <p class="text-xs text-[#030213]/70">Compte bancaire qui recevra les virements de vos clients.</p>
                 </div>
 

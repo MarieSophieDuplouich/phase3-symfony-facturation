@@ -7,10 +7,12 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 use Sensiolabs\GotenbergBundle\GotenbergPdfInterface;
 use Sensiolabs\GotenbergBundle\Processor\TempfileProcessor;
 
+#[IsGranted('ROLE_USER')]
 final class MailController extends AbstractController
 {
     #[Route('/mail', name: 'app_mail')]

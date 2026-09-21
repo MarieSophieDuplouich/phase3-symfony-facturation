@@ -1,5 +1,10 @@
 <div {{ attributes }}>
 
+    <div class="bg-blue-50 border border-blue-100 text-blue-800 text-sm rounded-lg px-4 py-3 mb-4">
+        <strong>Comment ça marche :</strong> 1) choisissez un client, 2) ajoutez au moins une ligne de produit/service
+        ci-dessous en cliquant sur "Ajouter", puis 3) cliquez sur "Enregistrer en brouillon" (ou "Enregistrer et valider").
+    </div>
+
     {# Informations générales #}
     <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-4">
         <h2 class="text-base font-semibold text-gray-800 mb-4">Informations Générales</h2>
@@ -16,7 +21,8 @@
                             </option>
                         {% endfor %}
                     </select>
-                    <a href="{{ path('app_client_new') }}"
+                    <a href="{{ path('app_client_new') }}" target="_blank"
+                       title="Ouvre dans un nouvel onglet pour ne pas perdre votre facture en cours"
                        class="flex items-center justify-center w-10 h-10 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
@@ -50,14 +56,16 @@
             <tbody>
                 {% if lines is empty %}
                     <tr>
-                        <td colspan="5" class="py-6 text-center text-sm text-gray-400">Aucune ligne ajoutée</td>
+                        <td colspan="5" class="py-6 text-center text-sm text-gray-500">
+                            Aucune ligne ajoutée — choisissez un produit ci-dessous puis cliquez sur "Ajouter".
+                        </td>
                     </tr>
                 {% else %}
                     {% for i, line in lines %}
                         <tr class="border-b border-gray-50">
                             <td class="py-3">
                                 <p class="text-sm font-medium text-gray-900">{{ line.name }}</p>
-                                <p class="text-xs text-gray-400">{{ line.description }}</p>
+                                <p class="text-xs text-gray-500">{{ line.description }}</p>
                             </td>
                             <td class="py-3 text-right text-sm text-gray-700">{{ line.quantity }}</td>
                             <td class="py-3 text-right text-sm text-gray-700">{{ line.unitPrice|number_format(2) }} €</td>
@@ -69,8 +77,9 @@
                                         data-live-action-param="removeLine"
                                         data-live-index-param="{{ i }}"
                                         type="button"
-                                        class="text-gray-300 hover:text-red-500 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        aria-label="Supprimer cette ligne"
+                                        class="text-gray-400 hover:text-red-500 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
                                     </svg>
                                 </button>
@@ -124,6 +133,18 @@
         </div>
     </div>
 
+    {% set canSave = clientId and lines is not empty %}
+
+    {% if error %}
+    <div class="mb-4 px-4 py-3 rounded-lg text-sm font-medium bg-red-50 text-red-800 border border-red-200">
+        {{ error }}
+    </div>
+    {% elseif not canSave %}
+    <p class="mb-4 text-sm text-gray-500 text-right">
+        Sélectionnez un client et ajoutez au moins une ligne pour pouvoir enregistrer.
+    </p>
+    {% endif %}
+
     {# Boutons #}
     <div class="flex justify-end gap-3">
         <a href="{{ path('app_invoice_index') }}"
@@ -131,17 +152,19 @@
             Annuler
         </a>
         <button data-action="live#action"
-                data-live-action-param="save"
-                data-live-action-param="draft"
+                data-live-action-param="save(action='draft')"
                 type="button"
-                class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-[#155DFC] bg-white border border-[#155DFC] rounded-lg hover:bg-blue-50 transition-colors">
+                {{ canSave ? '' : 'disabled' }}
+                class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-[#155DFC] bg-white border border-[#155DFC] rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white">
             Enregistrer en brouillon
         </button>
-        <button data-action="live#action"
-                data-live-action-param="save"
-                data-live-action-param="validate"
+        <button data-controller="confirm"
+                data-confirm-message-value="Une fois validée, la facture ne pourra plus être ni modifiée ni supprimée. Confirmer ?"
+                data-action="confirm#check live#action"
+                data-live-action-param="save(action='validate')"
                 type="button"
-                class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-[#155DFC] hover:bg-blue-700 rounded-lg transition-colors">
+                {{ canSave ? '' : 'disabled' }}
+                class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-[#155DFC] hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#155DFC]">
             Enregistrer et valider
         </button>
     </div>

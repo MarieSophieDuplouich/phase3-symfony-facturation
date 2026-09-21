@@ -1,0 +1,126 @@
+{# TODO (propriétaire du site) : gabarit générique de CGU pour un SaaS de facturation.
+   Faites-le relire par un juriste avant mise en production et complétez les variables
+   globales dans config/packages/twig.yaml. #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Conditions Générales d'Utilisation{% endblock %}
+{% block meta_description %}Conditions générales d'utilisation du service {{ app_name }}.{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[#F9FAFB] font-sans">
+    {% include 'components/PublicHeader.html.twig' %}
+
+    <main class="max-w-3xl mx-auto px-4 py-12">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Conditions Générales d'Utilisation</h1>
+        <p class="text-sm text-gray-500 mb-10">Dernière mise à jour : {{ "now"|date("d/m/Y") }}</p>
+
+        <div class="flex flex-col gap-8 text-gray-700 leading-relaxed">
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">1. Objet</h2>
+                <p>
+                    Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et
+                    l'utilisation du service {{ app_name }}, une application de facturation en ligne
+                    éditée par {{ company_legal_name }} ({{ company_legal_form }}), SIRET {{ company_siret }},
+                    dont le siège social est {{ company_address }}. En créant un compte, l'utilisateur
+                    accepte sans réserve les présentes CGU.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">2. Description du service</h2>
+                <p>
+                    {{ app_name }} permet à ses utilisateurs de créer et gérer des clients, des produits,
+                    des devis et des factures. Le service est accessible sur abonnement ou selon les
+                    conditions tarifaires en vigueur au moment de l'inscription.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">3. Compte utilisateur</h2>
+                <ul class="list-disc list-inside flex flex-col gap-1">
+                    <li>L'utilisateur garantit l'exactitude des informations fournies lors de l'inscription.</li>
+                    <li>L'utilisateur est seul responsable de la confidentialité de ses identifiants de connexion.</li>
+                    <li>Toute activité effectuée depuis un compte est présumée réalisée par son titulaire.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">4. Obligations de l'utilisateur</h2>
+                <p>L'utilisateur s'engage à :</p>
+                <ul class="list-disc list-inside flex flex-col gap-1">
+                    <li>Utiliser le service conformément à sa destination et à la réglementation en vigueur.</li>
+                    <li>Ne pas tenter de contourner les mesures de sécurité du service.</li>
+                    <li>Ne pas utiliser le service à des fins frauduleuses, notamment l'émission de fausses factures.</li>
+                    <li>Assurer lui-même la conformité fiscale et comptable des documents qu'il émet via le service.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">5. Disponibilité du service</h2>
+                <p>
+                    {{ company_legal_name }} met en œuvre les moyens raisonnables pour assurer un accès
+                    continu au service, sans garantie de disponibilité absolue. Des interruptions
+                    peuvent survenir pour maintenance, mise à jour, ou en cas de force majeure.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">6. Propriété intellectuelle</h2>
+                <p>
+                    Le service, son code, son design et sa marque restent la propriété exclusive de
+                    {{ company_legal_name }}. Les données saisies par l'utilisateur (clients, factures,
+                    produits) restent sa propriété exclusive.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">7. Responsabilité</h2>
+                <p>
+                    {{ company_legal_name }} ne saurait être tenue responsable des dommages indirects
+                    résultant de l'utilisation du service, ni du contenu des factures, devis ou
+                    informations clients saisis par l'utilisateur, dont il conserve l'entière
+                    responsabilité.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">8. Résiliation</h2>
+                <p>
+                    L'utilisateur peut supprimer son compte à tout moment. {{ company_legal_name }} se
+                    réserve le droit de suspendre ou résilier un compte en cas de manquement grave aux
+                    présentes CGU, après notification préalable lorsque cela est possible.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">9. Données personnelles</h2>
+                <p>
+                    Le traitement des données personnelles est décrit dans notre
+                    <a href="{{ path('app_privacy') }}" class="text-blue-700 underline">politique de confidentialité</a>.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">10. Modification des CGU</h2>
+                <p>
+                    {{ company_legal_name }} peut modifier les présentes CGU à tout moment. Les
+                    utilisateurs seront informés de tout changement substantiel. La poursuite de
+                    l'utilisation du service après modification vaut acceptation des nouvelles CGU.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">11. Droit applicable</h2>
+                <p>
+                    Les présentes CGU sont soumises au droit français. Tout litige relève de la
+                    compétence des tribunaux français.
+                </p>
+            </section>
+        </div>
+
+        <a href="{{ path('app_login') }}" class="inline-block mt-10 text-sm text-blue-700 underline">
+            &larr; Retour
+        </a>
+    </main>
+</div>
+{% endblock %}

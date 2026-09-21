@@ -1,0 +1,23 @@
+<div data-controller="cookie-consent">
+    <div data-cookie-consent-target="banner"
+         class="hidden fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
+        <div class="max-w-3xl mx-auto bg-white border border-gray-200 rounded-xl shadow-lg p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+            <p class="text-sm text-gray-600 flex-1">
+                Nous utilisons un cookie strictement nécessaire au fonctionnement de {{ app_name }}
+                (connexion, sécurité). Avec votre accord, nous utilisons aussi des cookies de mesure
+                d'audience pour améliorer le service.
+                <a href="{{ path('app_privacy') }}" class="text-blue-700 underline">En savoir plus</a>.
+            </p>
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button" data-action="cookie-consent#rejectNonEssential"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-lg transition">
+                    Refuser
+                </button>
+                <button type="button" data-action="cookie-consent#acceptAll"
+                        class="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium rounded-lg transition">
+                    Tout accepter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

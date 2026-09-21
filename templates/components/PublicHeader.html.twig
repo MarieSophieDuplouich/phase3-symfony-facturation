@@ -1,0 +1,12 @@
+<header class="border-b border-gray-200 bg-white">
+    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+        <a href="{{ path('app_login') }}" class="flex items-center gap-2 font-bold text-gray-900">
+            <span class="w-8 h-8 rounded-lg bg-blue-700 text-white flex items-center justify-center text-sm">F</span>
+            {{ app_name }}
+        </a>
+        <nav class="flex items-center gap-4 text-sm text-gray-500">
+            <a href="{{ path('app_terms') }}" class="hover:text-gray-900">CGU</a>
+            <a href="{{ path('app_privacy') }}" class="hover:text-gray-900">Confidentialité</a>
+        </nav>
+    </div>
+</header>

@@ -10,15 +10,17 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/client')]
+#[IsGranted('ROLE_USER')]
 final class ClientController extends AbstractController
 {
     #[Route(name: 'app_client_index', methods: ['GET'])]
     public function index(ClientRepository $clientRepository): Response
     {
         return $this->render('client/index.html.twig', [
-            'clients' => $clientRepository->findAll(),
+            'clients' => $clientRepository->findBy(['user' => $this->getUser()]),
         ]);
     }
 
@@ -39,13 +41,17 @@ final class ClientController extends AbstractController
         return $this->render('client/new.html.twig', [
             'client' => $client,
             'form' => $form->createView(),
-            'clients' => $clientRepository->findAll(),
+            'clients' => $clientRepository->findBy(['user' => $this->getUser()]),
         ]);
     }
 
     #[Route('/{id}', name: 'app_client_show', methods: ['GET'])]
     public function show(Client $client): Response
     {
+        if ($client->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
         return $this->render('client/show.html.twig', [
             'client' => $client,
         ]);
@@ -54,6 +60,10 @@ final class ClientController extends AbstractController
     #[Route('/{id}/edit', name: 'app_client_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Client $client, EntityManagerInterface $entityManager): Response
     {
+        if ($client->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
         $form = $this->createForm(ClientType::class, $client);
         $form->handleRequest($request);
 
@@ -72,6 +82,20 @@ final class ClientController extends AbstractController
     #[Route('/{id}', name: 'app_client_delete', methods: ['POST'])]
     public function delete(Request $request, Client $client, EntityManagerInterface $entityManager): Response
     {
+        if ($client->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if (!$client->getInvoices()->isEmpty()) {
+            $this->addFlash('error', sprintf(
+                'Impossible de supprimer "%s" : ce client a %d facture(s) associée(s). Supprimez ou réattribuez d\'abord ces factures.',
+                $client->getName(),
+                $client->getInvoices()->count()
+            ));
+
+            return $this->redirectToRoute('app_client_index', [], Response::HTTP_SEE_OTHER);
+        }
+
         if ($this->isCsrfTokenValid('delete' . $client->getId(), $request->getPayload()->getString('_token'))) {
             $entityManager->remove($client);
             $entityManager->flush();

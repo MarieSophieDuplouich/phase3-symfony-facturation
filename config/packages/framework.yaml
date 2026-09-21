@@ -2,7 +2,17 @@ framework:
     secret: '%env(APP_SECRET)%'
     session:
         cookie_lifetime: 3600
+        cookie_secure: auto
+        cookie_samesite: lax
         # gc_maxlifetime: 3600
+
+    # Si l'application tourne derrière un reverse proxy / load balancer qui
+    # termine le TLS à votre place (Nginx, Cloudflare, un LB cloud...),
+    # décommentez ces deux lignes pour que Symfony sache reconnaître le HTTPS
+    # d'origine (sinon $request->isSecure() renvoie toujours false, casse la
+    # redirection HTTPS forcée et le flag "secure" des cookies).
+    # trusted_proxies: '%env(TRUSTED_PROXIES)%'
+    # trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port']
 
 
 when@test:
