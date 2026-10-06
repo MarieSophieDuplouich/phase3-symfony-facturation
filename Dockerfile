@@ -37,6 +37,9 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d"
 
 ###> recipes ###
+###> doctrine/doctrine-bundle ###
+RUN install-php-extensions pdo_pgsql
+###< doctrine/doctrine-bundle ###
 ###< recipes ###
 
 COPY --link frankenphp/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
@@ -53,7 +56,6 @@ FROM frankenphp_base AS frankenphp_dev
 
 ENV APP_ENV=dev
 ENV XDEBUG_MODE=off
-ENV FRANKENPHP_WORKER_CONFIG=watch
 # dev dependencies
 RUN <<-EOF
 	mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
@@ -64,7 +66,7 @@ EOF
 
 COPY --link frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/app.conf.d/
 
-CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch" ]
+CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile" ]
 
 # Builder for the prod FrankenPHP image
 FROM frankenphp_base AS frankenphp_prod_builder
@@ -87,7 +89,8 @@ RUN <<-EOF
 	composer dump-autoload --classmap-authoritative --no-dev
 	composer dump-env prod
 	composer run-script --no-dev post-install-cmd
-	if [ -f importmap.php ]; then
+		if [ -f importmap.php ]; then
+		php bin/console tailwind:build --minify
 		php bin/console asset-map:compile
 	fi
 	chmod +x bin/console
@@ -162,5 +165,3 @@ ENTRYPOINT ["docker-entrypoint"]
 HEALTHCHECK --start-period=60s CMD php -r 'exit(false === @file_get_contents("http://localhost:2019/metrics", context: stream_context_create(["http" => ["timeout" => 5]])) ? 1 : 0);'
 CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile" ]
 
-# On installe TOUS les outils (dev + prod) car on est en mode développement
-RUN composer install --optimize-autoloader

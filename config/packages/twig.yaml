@@ -18,9 +18,6 @@ twig:
         hosting_provider_address: '[Adresse de l’hébergeur]'
         dpo_contact: 'dpo@factursaas.example'
 
-        # Vide par défaut : l'analytics reste désactivé tant que la variable
-        # d'environnement GA_MEASUREMENT_ID n'est pas renseignée.
-        ga_measurement_id: '%env(GA_MEASUREMENT_ID)%'
 
 when@test:
     twig:
