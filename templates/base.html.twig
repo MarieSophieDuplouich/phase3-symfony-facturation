@@ -34,39 +34,7 @@
         <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
         <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
 
-        {% if ga_measurement_id %}
-        <script>
-            // Analytics chargé UNIQUEMENT si l'utilisateur a accepté les cookies
-            // (bandeau de consentement) — voir components/CookieConsent.html.twig
-            // et assets/controllers/cookie_consent_controller.js.
-            (function () {
-                var GA_ID = {{ ga_measurement_id|json_encode|raw }};
-                var loaded = false;
-
-                function loadAnalytics() {
-                    if (loaded) return;
-                    loaded = true;
-
-                    var script = document.createElement('script');
-                    script.async = true;
-                    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
-                    document.head.appendChild(script);
-
-                    window.dataLayer = window.dataLayer || [];
-                    window.gtag = function () { window.dataLayer.push(arguments); };
-                    window.gtag('js', new Date());
-                    window.gtag('config', GA_ID, { anonymize_ip: true });
-                }
-
-                window.addEventListener('cookie-consent:changed', function (event) {
-                    if (event.detail && event.detail.analytics) {
-                        loadAnalytics();
-                    }
-                });
-            })();
-        </script>
-        {% endif %}
-
+    
         {% block stylesheets %}
         {% endblock %}
 
